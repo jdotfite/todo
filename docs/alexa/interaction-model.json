@@ -1,0 +1,58 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "todo list",
+      "intents": [
+        {
+          "name": "AddGroceryItemIntent",
+          "slots": [
+            { "name": "Item", "type": "AMAZON.SearchQuery" },
+            { "name": "Quantity", "type": "AMAZON.NUMBER" }
+          ],
+          "samples": [
+            "add {Item} to my grocery list",
+            "add {Quantity} {Item} to my grocery list",
+            "put {Item} on the grocery list",
+            "put {Quantity} {Item} on the grocery list"
+          ]
+        },
+        {
+          "name": "AddTodoIntent",
+          "slots": [
+            { "name": "Task", "type": "AMAZON.SearchQuery" },
+            { "name": "Item", "type": "AMAZON.SearchQuery" }
+          ],
+          "samples": [
+            "add {Task} to my todo list",
+            "remind me to {Task}",
+            "add todo {Task}",
+            "add {Item}"
+          ]
+        },
+        {
+          "name": "ListGroceryIntent",
+          "slots": [],
+          "samples": [
+            "what is on my grocery list",
+            "read my grocery list",
+            "what groceries do I need"
+          ]
+        },
+        {
+          "name": "ListTodosIntent",
+          "slots": [],
+          "samples": [
+            "what is on my todo list",
+            "what do I need to do today",
+            "read my todo list"
+          ]
+        },
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.NavigateHomeIntent", "samples": [] }
+      ],
+      "types": []
+    }
+  }
+}
