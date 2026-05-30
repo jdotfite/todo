@@ -28,16 +28,16 @@ async function render() {
   if (view.eink) return renderEink();
   if (view.projects) return renderProjects();
   if (view.grocery) return renderGrocery();
+
+  const { tasks: allOpenTasks } = await api('/api/tasks?status=open');
   let tasks;
   if (view.future) {
-    ({ tasks } = await api('/api/tasks?status=open'));
-    const today = todayString();
-    tasks = tasks.filter(t => t.dueDate && t.dueDate > today);
+    tasks = allOpenTasks.filter(t => t.dueDate && t.dueDate > todayString());
   } else {
     ({ tasks } = await api(`/api/tasks?${view.query}`));
   }
   tasks = applyFilter(tasks);
-  content.innerHTML = viewHeader(view.title, view.subtitle, view.filters) + (tasks.length ? `<div class="task-list">${tasks.map(taskHtml).join('')}</div>` : emptyState(view.title));
+  content.innerHTML = summaryCards(allOpenTasks) + viewHeader(view.title, view.subtitle, view.filters) + (tasks.length ? workSectionsHtml(tasks) : emptyState(view.title));
   bindTaskControls();
 }
 
@@ -50,8 +50,24 @@ function applyFilter(tasks) {
   return tasks;
 }
 
+function summaryCards(tasks) {
+  const today = todayString();
+  const counts = {
+    today: tasks.filter(t => !t.dueDate || t.dueDate <= today).length,
+    scheduled: tasks.filter(t => t.dueDate && t.dueDate > today).length,
+    all: tasks.length,
+    overdue: tasks.filter(t => t.dueDate && t.dueDate < today).length,
+  };
+  return `<section class="summary-grid" aria-label="Task summary">
+    <a class="summary-card lavender" href="/today"><span class="summary-icon">◷</span><span>Today</span><strong>${counts.today}</strong></a>
+    <a class="summary-card lemon" href="/future"><span class="summary-icon">▣</span><span>Scheduled</span><strong>${counts.scheduled}</strong></a>
+    <a class="summary-card mint" href="/inbox"><span class="summary-icon">□</span><span>All Open</span><strong>${counts.all}</strong></a>
+    <button class="summary-card pink" data-filter="overdue"><span class="summary-icon">!</span><span>Overdue</span><strong>${counts.overdue}</strong></button>
+  </section>`;
+}
+
 function viewHeader(title, subtitle = '', showFilters = false) {
-  return `<div class="view-header"><h2>${escapeHtml(title)}</h2>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}${showFilters ? filterBar() : ''}</div>`;
+  return `<div class="view-header"><div><p class="eyebrow">Personal tasks</p><h2>${escapeHtml(title)}</h2>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}</div>${showFilters ? filterBar() : ''}</div>`;
 }
 
 function filterBar() {
@@ -69,8 +85,32 @@ function emptyState(title) {
   return `<div class="empty-state">${messages[title] || 'Nothing here yet.'}</div>`;
 }
 
+function workSectionsHtml(tasks) {
+  const groups = tasks.reduce((acc, task) => {
+    const key = task.project || 'inbox';
+    (acc[key] ||= []).push(task);
+    return acc;
+  }, {});
+  return `<div class="work-list" data-group-by="project">${Object.entries(groups).map(([project, group], index) => `
+    <section class="work-section tone-${index % 4}">
+      <header class="work-section-header">
+        <span class="status-dot"></span>
+        <strong>${escapeHtml(labelizeProject(project))}</strong>
+        <span class="section-count">${group.length}</span>
+        <button type="button" class="section-add" onclick="document.querySelector('#new-project').value='${escapeAttribute(project)}';document.querySelector('#new-title').focus()">+</button>
+      </header>
+      <div class="task-table-head" aria-hidden="true"><span>Name</span><span>Project</span><span>Due date</span><span>Flags</span><span></span></div>
+      <div class="task-list">${group.map(taskHtml).join('')}</div>
+    </section>`).join('')}</div>`;
+}
+
+function labelizeProject(project) {
+  if (!project) return 'Inbox';
+  return project.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function taskHtml(t) {
-  const due = t.dueDate ? `<span class="badge due">due ${escapeHtml(t.dueDate)}</span>` : '<span class="badge muted">no date</span>';
+  const due = t.dueDate ? `<span class="badge due">${escapeHtml(t.dueDate)}</span>` : '<span class="badge muted">No date</span>';
   const recur = t.recurrence && t.recurrence !== 'none' ? `<span class="badge recur">${escapeHtml(t.recurrence)}</span>` : '';
   const status = t.status === 'done' ? ' done' : '';
   return `<article class="task${status}" draggable="true" data-id="${t.id}">
@@ -87,6 +127,7 @@ function taskHtml(t) {
         </div>
       </details>
     </div>
+    <div class="task-due-cell">${due}</div>
     <div class="task-actions">
       <button class="waiting-toggle ${t.waiting ? 'active' : ''}">${t.waiting ? 'Waiting' : 'Wait'}</button>
       <button class="eink-toggle">${t.showOnEink ? 'Hide e-ink' : 'E-ink'}</button>
@@ -96,7 +137,7 @@ function taskHtml(t) {
 }
 
 function bindTaskControls() {
-  document.querySelectorAll('.filter').forEach(btn => btn.onclick = () => { activeFilter = btn.dataset.filter; render(); });
+  document.querySelectorAll('.filter, .summary-card[data-filter]').forEach(btn => btn.onclick = () => { activeFilter = btn.dataset.filter; render(); });
   document.querySelectorAll('.complete').forEach(btn => btn.onclick = async e => {
     const id = e.target.closest('.task').dataset.id;
     await api(`/api/tasks/${id}/complete`, { method: 'POST' });
@@ -149,11 +190,12 @@ function bindDragDrop() {
 async function renderProjects() {
   setActiveNav();
   const { projects } = await api('/api/projects');
-  content.innerHTML = viewHeader('Projects', 'Group tasks by the project tag you enter when adding them.') + (projects.length ? `<div class="project-grid">${projects.map(p => `<a class="project-card" href="#" data-project="${escapeHtml(p.project)}"><span>${escapeHtml(p.project)}</span> <span class="badge">${p.count}</span></a>`).join('')}</div>` : emptyState('Projects'));
+  const palette = ['pink', 'lavender', 'lemon', 'green', 'mint'];
+  content.innerHTML = viewHeader('Projects', 'Clean project cards on mobile; grouped workbench on desktop.') + (projects.length ? `<div class="project-stack">${projects.map((p, i) => `<a class="project-card ${palette[i % palette.length]}" href="#" data-project="${escapeHtml(p.project)}"><span><strong>${escapeHtml(labelizeProject(p.project))}</strong><small>${p.count} open notes</small></span><span class="badge done">Open →</span></a>`).join('')}</div>` : emptyState('Projects'));
   content.querySelectorAll('[data-project]').forEach(a => a.onclick = async e => {
     e.preventDefault();
     const { tasks } = await api(`/api/tasks?status=open&project=${encodeURIComponent(a.dataset.project)}`);
-    content.innerHTML = viewHeader(a.dataset.project, 'Open tasks in this project.', true) + (tasks.length ? `<div class="task-list">${applyFilter(tasks).map(taskHtml).join('')}</div>` : emptyState('Project'));
+    content.innerHTML = viewHeader(labelizeProject(a.dataset.project), 'Open tasks in this project.', true) + (tasks.length ? workSectionsHtml(applyFilter(tasks)) : emptyState('Project'));
     bindTaskControls();
   });
 }
@@ -257,4 +299,5 @@ document.addEventListener('keydown', e => {
 });
 
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttribute(s) { return escapeHtml(s).replace(/`/g, '&#96;'); }
 render().catch(err => content.innerHTML = `<pre>${escapeHtml(err.stack || err.message)}</pre>`);

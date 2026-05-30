@@ -9,37 +9,61 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <header class="app-header">
-    <a class="brand" href="/today" aria-label="Todo home">
-      <span class="brand-mark" aria-hidden="true">✓</span>
-      <span>Todo</span>
-    </a>
-    <nav aria-label="Main views">
-      <a href="/inbox" data-nav="/inbox">Inbox</a>
-      <a href="/today" data-nav="/today">Today</a>
-      <a href="/future" data-nav="/future">Future</a>
-      <a href="/grocery" data-nav="/grocery">Grocery</a>
-      <a href="/projects" data-nav="/projects">Projects</a>
-      <a href="/eink" data-nav="/eink">E-ink</a>
-      <a href="/done" data-nav="/done">Done</a>
-    </nav>
-  </header>
-  <main>
-    <section class="composer" aria-label="Add a new task">
-      <input id="new-title" placeholder="Add a task…" autofocus />
-      <input id="new-project" placeholder="project" value="inbox" list="project-options" />
-      <input id="new-due" type="date" aria-label="Due date" />
-      <select id="new-recurrence" aria-label="Repeat">
-        <option value="none">No repeat</option>
-        <option value="daily">Daily</option>
-        <option value="weekly">Weekly</option>
-        <option value="monthly">Monthly</option>
-      </select>
-      <button id="add">Add</button>
-      <datalist id="project-options"></datalist>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <a class="brand" href="/today" aria-label="Todo home">
+        <span class="brand-mark" aria-hidden="true">✓</span>
+        <span><strong>Todo</strong><small>Family workspace</small></span>
+      </a>
+      <nav aria-label="Main views">
+        <a href="/inbox" data-nav="/inbox"><span>□</span> Inbox</a>
+        <a href="/today" data-nav="/today"><span>◷</span> Today</a>
+        <a href="/future" data-nav="/future"><span>▣</span> Future</a>
+        <a href="/grocery" data-nav="/grocery"><span>🛒</span> Grocery</a>
+        <a href="/projects" data-nav="/projects"><span>⌁</span> Projects</a>
+        <a href="/eink" data-nav="/eink"><span>▤</span> E-ink</a>
+        <a href="/done" data-nav="/done"><span>✓</span> Done</a>
+      </nav>
+      <div class="sidebar-note">
+        <strong>Quick keys</strong>
+        <span>N to add · 1 Today · 4 Grocery</span>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <header class="topbar">
+        <div class="mobile-greeting">
+          <strong>Hello Jack,</strong>
+          <span>You have work today</span>
+        </div>
+        <div class="breadcrumb">Tasks <span>/</span> Personal command center</div>
+        <div class="topbar-actions" aria-label="View tools">
+          <button type="button" data-group-by="project">Group by Project</button>
+          <a class="ghost-link" href="/projects">Projects</a>
+        </div>
+      </header>
+
+      <main>
+        <section class="composer quick-add" aria-label="Add a new task">
+          <input id="new-title" placeholder="Add a task…" autofocus />
+          <input id="new-project" placeholder="project" value="inbox" list="project-options" />
+          <input id="new-due" type="date" aria-label="Due date" />
+          <select id="new-recurrence" aria-label="Repeat">
+            <option value="none">No repeat</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <button id="add">Add</button>
+          <datalist id="project-options"></datalist>
+        </section>
+        <section id="content"></section>
+      </main>
     </section>
-    <section id="content"></section>
-  </main>
+  </div>
+
+  <button class="fab-add" type="button" aria-label="Add task" onclick="document.querySelector('#new-title').focus()">+</button>
+
   <script src="/app.js" type="module"></script>
   <script>
     if ('serviceWorker' in navigator) {
