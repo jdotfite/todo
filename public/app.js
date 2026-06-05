@@ -459,7 +459,7 @@ async function renderTips() {
   setActiveNav();
   setBodyView('tips');
   const today = new Date().toISOString().slice(0, 10);
-  const [summary, { entries }] = await Promise.all([api('/api/tips/summary'), api('/api/tips')]);
+  const [summary, { entries }, breakdown] = await Promise.all([api('/api/tips/summary'), api('/api/tips'), api('/api/tips/breakdown')]);
   const fmt = n => '$' + Number(n).toFixed(2).replace(/\.00$/, '');
   content.innerHTML = viewHeader('Tips', `${entries.length} shift${entries.length === 1 ? '' : 's'} logged.`) + `
     <section class="tips-summary-grid">
@@ -467,6 +467,8 @@ async function renderTips() {
       <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(fmt(summary.thisMonth))}</span><small>This month</small></div>
       <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(fmt(summary.avgPerShift))}</span><small>Avg / shift</small></div>
     </section>
+    ${entries.length ? `<div class="tips-export-row"><a class="tips-export-btn" href="/api/tips/export.csv" download="tips-export.csv">↓ Export CSV</a></div>` : ''}
+    ${tipsBreakdownHtml(breakdown)}
     <section class="hub-panel tips-log-panel">
       <header><h3>Log Shift</h3></header>
       <form id="tips-form" class="tips-form">
@@ -567,6 +569,40 @@ function tipShiftHtml(entry) {
       <button type="button" class="tips-delete-btn">Delete</button>
     </div>
   </article>`;
+}
+
+
+function tipsBreakdownHtml(breakdown) {
+  if (!breakdown) return '';
+  const fmt = n => n > 0 ? '$' + Number(n).toFixed(2).replace(/\.00$/, '') : '';
+  const hasWeekActivity = breakdown.week.some(d => d.count > 0);
+  const hasMonthActivity = breakdown.month.some(w => w.count > 0);
+  if (!hasWeekActivity && !hasMonthActivity) return '';
+
+  const weekRows = breakdown.week
+    .filter(d => d.count > 0)
+    .map(d => `<tr><td>${escapeHtml(d.label)}</td><td class="tip-num">${escapeHtml(fmt(d.total))}</td><td class="tip-num tip-muted">Cash ${escapeHtml(fmt(d.cash))}</td><td class="tip-num tip-muted">Card ${escapeHtml(fmt(d.card))}</td><td class="tip-num tip-muted">${d.hours ? d.hours + 'h' : ''}</td></tr>`)
+    .join('');
+
+  const monthRows = breakdown.month
+    .map(w => {
+      const startDate = new Date(w.start + 'T12:00:00Z');
+      const label = 'Week of ' + startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+      return `<tr><td>${escapeHtml(label)}</td><td class="tip-num">${escapeHtml(fmt(w.total))}</td><td class="tip-num tip-muted">Cash ${escapeHtml(fmt(w.cash))}</td><td class="tip-num tip-muted">Card ${escapeHtml(fmt(w.card))}</td><td class="tip-num tip-muted">${w.hours ? w.hours + 'h' : ''}</td></tr>`;
+    })
+    .join('');
+
+  const weekSection = hasWeekActivity ? `<section class="tips-breakdown-section">
+    <h4>This Week</h4>
+    <table class="tips-breakdown-table"><tbody>${weekRows}</tbody></table>
+  </section>` : '';
+
+  const monthSection = hasMonthActivity ? `<section class="tips-breakdown-section">
+    <h4>${new Date().toLocaleDateString('en-US', { month: 'long' })}</h4>
+    <table class="tips-breakdown-table"><tbody>${monthRows}</tbody></table>
+  </section>` : '';
+
+  return `<div class="tips-breakdown">${weekSection}${monthSection}</div>`;
 }
 
 function tipEditFormHtml(entry) {

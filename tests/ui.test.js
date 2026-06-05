@@ -142,8 +142,8 @@ test('brand and navigation polish uses favicon, flat yellow, and cleaner sidebar
 
   assert.match(html, /rel="icon" href="\/icon\.svg"/);
   assert.match(html, /rel="apple-touch-icon" href="\/icon\.svg"/);
-  assert.match(html, /styles\.css\?v=hub-pwa-6/);
-  assert.match(html, /app\.js\?v=hub-pwa-6/);
+  assert.match(html, /styles\.css\?v=hub-pwa-7/);
+  assert.match(html, /app\.js\?v=hub-pwa-7/);
   assert.match(html, /<img src="\/house-logo\.svg" alt="" \/>/);
   assert.match(html, /<a href="\/home" data-nav="\/home"><span>🏠<\/span> Home<\/a>/);
   assert.match(html, /<a href="\/inbox" data-nav="\/inbox"><span>↧<\/span> Inbox<\/a>/);
@@ -169,8 +169,8 @@ test('household hub includes documents, capture, sticky navigation, and PWA home
 
   assert.match(html, /<title>Household Hub<\/title>/);
   assert.match(html, /data-nav="\/documents"/);
-  assert.match(html, /styles\.css\?v=hub-pwa-6/);
-  assert.match(html, /app\.js\?v=hub-pwa-6/);
+  assert.match(html, /styles\.css\?v=hub-pwa-7/);
+  assert.match(html, /app\.js\?v=hub-pwa-7/);
   assert.match(js, /function renderDocuments/);
   assert.match(js, /function quickCapture/);
   assert.match(js, /\/api\/documents/);
@@ -189,7 +189,7 @@ test('household hub includes documents, capture, sticky navigation, and PWA home
   assert.equal(manifest.name, 'Household Hub');
   assert.equal(manifest.short_name, 'Hub');
   assert.equal(manifest.start_url, '/home');
-  assert.match(sw, /todo-hub-v6/);
+  assert.match(sw, /todo-hub-v7/);
   assert.match(sw, /'\/home'/);
   assert.match(sw, /'\/calendar'/);
   assert.match(sw, /'\/documents'/);
@@ -206,8 +206,8 @@ test('profile switcher renders module-aware navigation and cache-bumped PWA asse
 
   assert.match(html, /id="profile-switcher"/);
   assert.match(html, /data-module-nav/);
-  assert.match(html, /styles\.css\?v=hub-pwa-6/);
-  assert.match(html, /app\.js\?v=hub-pwa-6/);
+  assert.match(html, /styles\.css\?v=hub-pwa-7/);
+  assert.match(html, /app\.js\?v=hub-pwa-7/);
   assert.match(js, /\/api\/profiles/);
   assert.match(js, /\/api\/profile\/select/);
   assert.match(js, /\/api\/modules/);
@@ -216,6 +216,6 @@ test('profile switcher renders module-aware navigation and cache-bumped PWA asse
   assert.match(js, /data-nav="\$\{escapeAttribute\(module\.href\)\}"/);
   assert.match(css, /\.profile-switcher/);
   assert.match(css, /\.profile-pill/);
-  assert.match(sw, /todo-hub-v6/);
+  assert.match(sw, /todo-hub-v7/);
   assert.match(sw, /'\/tips'/);
 });

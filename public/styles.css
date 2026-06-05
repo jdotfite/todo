@@ -2077,3 +2077,15 @@ body[data-view="documents"] .fab-add::after { content: 'Add task'; }
 .tips-shift-notes { color: var(--faint); font-style: italic; }
 .tips-shift-actions { display: flex; gap: 8px; }
 .tips-shift-actions button { font-size: 12px; padding: 5px 10px; border-radius: 8px; cursor: pointer; }
+
+/* Tips breakdown + export */
+.tips-export-row { display: flex; justify-content: flex-end; margin-bottom: 4px; }
+.tips-export-btn { font-size: 12px; font-weight: 750; color: var(--muted); text-decoration: none; padding: 6px 12px; border: 1px solid var(--border); border-radius: 10px; background: transparent; }
+.tips-export-btn:hover { color: #ffd60a; border-color: #ffd60a; }
+.tips-breakdown { display: grid; gap: 14px; margin-top: 8px; }
+.tips-breakdown-section h4 { margin: 0 0 8px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.tips-breakdown-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tips-breakdown-table td { padding: 6px 8px 6px 0; vertical-align: middle; }
+.tips-breakdown-table td:first-child { font-weight: 700; color: var(--text); min-width: 48px; }
+.tip-num { text-align: right; font-variant-numeric: tabular-nums; }
+.tip-muted { color: var(--muted); }

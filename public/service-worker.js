@@ -1,4 +1,4 @@
-const CACHE_NAME = 'todo-hub-v6';
+const CACHE_NAME = 'todo-hub-v7';
 const APP_SHELL = [
   '/',
   '/home',
@@ -7,8 +7,8 @@ const APP_SHELL = [
   '/grocery',
   '/documents',
   '/tips',
-  '/app.js?v=hub-pwa-6',
-  '/styles.css?v=hub-pwa-6',
+  '/app.js?v=hub-pwa-7',
+  '/styles.css?v=hub-pwa-7',
   '/manifest.webmanifest',
   '/icon.svg',
   '/house-logo.svg',

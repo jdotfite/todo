@@ -316,3 +316,100 @@ test('tips API requires household auth when enabled', async () => {
     server.close();
   }
 });
+
+
+// --- CSV export ---
+
+test('exportTipsCsv produces correct CSV with headers and one row per entry', async () => {
+  await resetForTests();
+  const { exportTipsCsv } = await import('../src/modules/tips/data.js');
+
+  await createTipEntry({ date: '2025-03-15', shiftType: 'night', location: 'downtown', cashTips: 42, cardTips: 18.5, hours: 6, notes: 'busy' });
+  await createTipEntry({ date: '2025-03-10', shiftType: 'day', location: '', cashTips: 30, cardTips: 0 });
+
+  const csv = await exportTipsCsv();
+  const lines = csv.split('\n');
+  assert.equal(lines[0], '"date","shift_type","location","cash_tips","card_tips","total","hours","notes"');
+  assert.equal(lines.length, 3);
+  assert.match(lines[1], /2025-03-15/);
+  assert.match(lines[1], /42/);
+  assert.match(lines[1], /"60\.50"/);
+  assert.match(lines[2], /2025-03-10/);
+});
+
+test('exportTipsCsv escapes quotes in fields', async () => {
+  await resetForTests();
+  const { exportTipsCsv } = await import('../src/modules/tips/data.js');
+  await createTipEntry({ date: '2025-03-15', cashTips: 10, cardTips: 5, notes: 'said "great night"' });
+  const csv = await exportTipsCsv();
+  assert.match(csv, /"said ""great night""/);
+});
+
+test('GET /api/tips/export.csv returns CSV content type and data', async () => {
+  await withServer(async base => {
+    await fetch(`${base}/api/tips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: '2025-03-15', cashTips: 40, cardTips: 20 }),
+    });
+
+    const res = await fetch(`${base}/api/tips/export.csv`);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type'), /text\/csv/);
+    assert.match(res.headers.get('content-disposition'), /filename="tips-export\.csv"/);
+    const text = await res.text();
+    assert.match(text, /"date","shift_type","location"/);
+    assert.match(text, /2025-03-15/);
+  });
+});
+
+// --- Breakdown ---
+
+test('getTipBreakdown returns a 7-day week array and month weeks array', async () => {
+  await resetForTests();
+  const { getTipBreakdown } = await import('../src/modules/tips/data.js');
+
+  const today = new Date().toISOString().slice(0, 10);
+  await createTipEntry({ date: today, cashTips: 30, cardTips: 20 });
+
+  const breakdown = await getTipBreakdown();
+
+  assert.equal(breakdown.week.length, 7);
+  assert.ok(breakdown.week.every(d => d.date && d.label));
+
+  const todaySlot = breakdown.week.find(d => d.date === today);
+  assert.ok(todaySlot, 'today should appear in the week breakdown');
+  assert.equal(todaySlot.total, 50);
+  assert.equal(todaySlot.cash, 30);
+  assert.equal(todaySlot.card, 20);
+  assert.equal(todaySlot.count, 1);
+
+  assert.ok(Array.isArray(breakdown.month));
+  const hasThisMonthWeek = breakdown.month.some(w => w.count > 0);
+  assert.ok(hasThisMonthWeek, 'this month breakdown should include the week with today');
+});
+
+test('getTipBreakdown week totals sum correctly with multiple shifts on same day', async () => {
+  await resetForTests();
+  const { getTipBreakdown } = await import('../src/modules/tips/data.js');
+
+  const today = new Date().toISOString().slice(0, 10);
+  await createTipEntry({ date: today, cashTips: 20, cardTips: 10 });
+  await createTipEntry({ date: today, cashTips: 15, cardTips: 5 });
+
+  const breakdown = await getTipBreakdown();
+  const todaySlot = breakdown.week.find(d => d.date === today);
+  assert.equal(todaySlot.total, 50);
+  assert.equal(todaySlot.count, 2);
+});
+
+test('GET /api/tips/breakdown returns week and month arrays', async () => {
+  await withServer(async base => {
+    const res = await fetch(`${base}/api/tips/breakdown`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.ok(Array.isArray(body.week));
+    assert.ok(Array.isArray(body.month));
+    assert.equal(body.week.length, 7);
+  });
+});

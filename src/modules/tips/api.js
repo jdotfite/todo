@@ -1,8 +1,19 @@
-import { createTipEntry, listTipEntries, updateTipEntry, deleteTipEntry, getTipSummary } from './data.js';
+import { createTipEntry, listTipEntries, updateTipEntry, deleteTipEntry, getTipSummary, exportTipsCsv, getTipBreakdown } from './data.js';
 
 export function registerTipsRoutes(app) {
   app.get('/api/tips/summary', async (_req, res, next) => {
     try { res.json(await getTipSummary()); } catch (err) { next(err); }
+  });
+
+  app.get('/api/tips/breakdown', async (_req, res, next) => {
+    try { res.json(await getTipBreakdown()); } catch (err) { next(err); }
+  });
+
+  app.get('/api/tips/export.csv', async (_req, res, next) => {
+    try {
+      const csv = await exportTipsCsv();
+      res.type('text/csv').setHeader('Content-Disposition', 'attachment; filename="tips-export.csv"').send(csv);
+    } catch (err) { next(err); }
   });
 
   app.get('/api/tips', async (req, res, next) => {

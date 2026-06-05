@@ -134,3 +134,84 @@ export async function getTipSummary() {
     entryCount: entries.length,
   };
 }
+
+export async function exportTipsCsv() {
+  const entries = await listTipEntries();
+  const headers = ['date', 'shift_type', 'location', 'cash_tips', 'card_tips', 'total', 'hours', 'notes'];
+  const csvCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [headers.map(csvCell).join(',')];
+  for (const e of entries) {
+    rows.push([
+      e.date,
+      e.shiftType,
+      e.location,
+      e.cashTips,
+      e.cardTips,
+      ((Number(e.cashTips) || 0) + (Number(e.cardTips) || 0)).toFixed(2),
+      e.hours ?? '',
+      e.notes,
+    ].map(csvCell).join(','));
+  }
+  return rows.join('\n');
+}
+
+export async function getTipBreakdown() {
+  const entries = await listTipEntries();
+
+  // --- This week: one slot per calendar day Sun..Sat ---
+  const now = new Date();
+  const weekStartDate = new Date(now);
+  weekStartDate.setDate(now.getDate() - now.getDay());
+  weekStartDate.setHours(0, 0, 0, 0);
+
+  const weekDays = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStartDate);
+    d.setDate(weekStartDate.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayEntries = entries.filter(e => e.date === dateStr);
+    const total = dayEntries.reduce((s, e) => s + (Number(e.cashTips) || 0) + (Number(e.cardTips) || 0), 0);
+    weekDays.push({
+      date: dateStr,
+      label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      total: Math.round(total * 100) / 100,
+      cash: Math.round(dayEntries.reduce((s, e) => s + (Number(e.cashTips) || 0), 0) * 100) / 100,
+      card: Math.round(dayEntries.reduce((s, e) => s + (Number(e.cardTips) || 0), 0) * 100) / 100,
+      hours: Math.round(dayEntries.reduce((s, e) => s + (Number(e.hours) || 0), 0) * 10) / 10,
+      count: dayEntries.length,
+    });
+  }
+
+  // --- This month: group by week ---
+  const monthPrefix = now.toISOString().slice(0, 7);
+  const monthEntries = entries.filter(e => e.date.startsWith(monthPrefix));
+
+  const weekMap = new Map();
+  for (const e of monthEntries) {
+    const d = new Date(e.date + 'T12:00:00Z');
+    const wStart = new Date(d);
+    wStart.setUTCDate(d.getUTCDate() - d.getUTCDay());
+    const key = wStart.toISOString().slice(0, 10);
+    if (!weekMap.has(key)) {
+      weekMap.set(key, { start: key, total: 0, cash: 0, card: 0, hours: 0, count: 0 });
+    }
+    const w = weekMap.get(key);
+    w.total += (Number(e.cashTips) || 0) + (Number(e.cardTips) || 0);
+    w.cash += Number(e.cashTips) || 0;
+    w.card += Number(e.cardTips) || 0;
+    w.hours += Number(e.hours) || 0;
+    w.count++;
+  }
+
+  const monthWeeks = [...weekMap.values()]
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .map(w => ({
+      ...w,
+      total: Math.round(w.total * 100) / 100,
+      cash: Math.round(w.cash * 100) / 100,
+      card: Math.round(w.card * 100) / 100,
+      hours: Math.round(w.hours * 10) / 10,
+    }));
+
+  return { week: weekDays, month: monthWeeks };
+}
