@@ -14,11 +14,14 @@ test('alexa interaction model includes todo and grocery intents', () => {
   assert.ok(groceryIntent.samples.some(sample => sample.includes('{Item}')));
 });
 
-test('deployment guide documents vercel kv and alexa token setup', () => {
+test('deployment guide documents vercel kv, auth, calendar, and alexa setup', () => {
   assert.ok(existsSync('docs/deploy.md'));
   const guide = readFileSync('docs/deploy.md', 'utf8');
   assert.match(guide, /KV_REST_API_URL/);
   assert.match(guide, /KV_REST_API_TOKEN/);
+  assert.match(guide, /HOUSEHOLD_PASSWORD/);
+  assert.match(guide, /GOOGLE_CALENDAR_ICAL_URL/);
+  assert.match(guide, /\/api\/eink\/dashboard/);
   assert.match(guide, /ALEXA_API_TOKEN/);
   assert.match(guide, /\/api\/alexa/);
 });

@@ -78,7 +78,52 @@ https://<your-vercel-app>.vercel.app/api/alexa?token=***
 
 The query-string form is easier for the first manual Alexa Developer Console setup. Use account linking or a request-signature verifier later if this becomes more than a private household skill.
 
-## 5. Verify deployment
+## 5. Add Google Calendar for the e-paper dashboard
+
+The `/api/eink/dashboard` endpoint includes a `calendar` array for the next few days.
+
+For Vercel, the simplest private read-only setup is the Family calendar's **secret iCal URL**:
+
+```text
+GOOGLE_CALENDAR_ICAL_URL=<secret-google-calendar-ical-url>
+```
+
+Google Calendar path: Calendar settings → select the Family calendar → **Integrate calendar** → copy **Secret address in iCal format**. Keep this URL private; anyone with it can read that calendar.
+
+Local/Hermes fallback uses the Google Workspace OAuth token on this machine:
+
+```text
+FAMILY_CALENDAR_ID=family12925651382350424080@group.calendar.google.com
+GOOGLE_API_SCRIPT=/home/agent/.hermes/skills/productivity/google-workspace/scripts/google_api.py
+```
+
+Optional tuning:
+
+```text
+EINK_CALENDAR_ENABLED=true
+EINK_CALENDAR_DAYS=3
+EINK_CALENDAR_MAX=8
+EINK_FACTS_ENABLED=true
+EINK_FACT_CACHE_MS=3600000
+```
+
+Verify with:
+
+```text
+https://<your-vercel-app>.vercel.app/api/eink/dashboard?token=***
+```
+
+The response should include upcoming events like:
+
+```json
+{
+  "calendar": [
+    { "summary": "Soccer practice", "date": "2026-06-05", "time": "All day" }
+  ]
+}
+```
+
+## 6. Verify deployment
 
 After deploy, check:
 
@@ -97,7 +142,7 @@ Expected health response:
 
 If household auth is enabled, `/today` and `/grocery` should redirect to `/login` until you enter the household password.
 
-## 6. Alexa skill setup
+## 7. Alexa skill setup
 
 1. Open <https://developer.amazon.com/alexa/console/ask>.
 2. Create a custom skill.
@@ -119,7 +164,7 @@ what is on my grocery list
 what is on my todo list
 ```
 
-## 7. Current Alexa intents
+## 8. Current Alexa intents
 
 - `AddGroceryItemIntent` — adds item plus optional quantity to Walmart/grocery list.
 - `AddTodoIntent` — adds a todo, or uses quick-add parsing if the phrase starts with `grocery` or `walmart`.

@@ -69,6 +69,37 @@ test('alexa endpoint requires token and can add a grocery item', async () => {
   }
 });
 
+test('e-ink dashboard can read calendar events from an iCal URL', async () => {
+  await resetForTests();
+  const previousIcalUrl = process.env.GOOGLE_CALENDAR_ICAL_URL;
+  const previousFactsEnabled = process.env.EINK_FACTS_ENABLED;
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
+  const ics = `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:family-test-1\nDTSTART;VALUE=DATE:${tomorrow}\nSUMMARY:Soccer practice\\, field 2\nEND:VEVENT\nEND:VCALENDAR\n`;
+
+  process.env.GOOGLE_CALENDAR_ICAL_URL = `data:text/calendar,${encodeURIComponent(ics)}`;
+  process.env.EINK_FACTS_ENABLED = 'false';
+
+  const app = createApp();
+  const server = await new Promise(resolve => {
+    const s = app.listen(0, () => resolve(s));
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  try {
+    const res = await fetch(`${base}/api/eink/dashboard`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.calendar.length, 1);
+    assert.equal(body.calendar[0].id, 'family-test-1');
+    assert.equal(body.calendar[0].summary, 'Soccer practice, field 2');
+    assert.equal(body.calendar[0].time, 'All day');
+  } finally {
+    if (previousIcalUrl === undefined) delete process.env.GOOGLE_CALENDAR_ICAL_URL; else process.env.GOOGLE_CALENDAR_ICAL_URL = previousIcalUrl;
+    if (previousFactsEnabled === undefined) delete process.env.EINK_FACTS_ENABLED; else process.env.EINK_FACTS_ENABLED = previousFactsEnabled;
+    server.close();
+  }
+});
+
 test('household auth protects app pages and api when enabled', async () => {
   await resetForTests();
   const previousPassword = process.env.HOUSEHOLD_PASSWORD;
