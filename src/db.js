@@ -2,7 +2,8 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-export const dbPath = resolve(process.env.TODO_DB || './data/todo.json');
+const fallbackDbPath = process.env.VERCEL ? '/tmp/todo.json' : './data/todo.json';
+export const dbPath = resolve(process.env.TODO_DB || fallbackDbPath);
 const kvKey = process.env.TODO_KV_KEY || 'todo:store';
 
 function emptyStore() {
