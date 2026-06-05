@@ -1,6 +1,6 @@
 import express from 'express';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { addSubtask, createTask, updateSubtask, deleteSubtask, updateTask, completeTask, listTasks, reorderTasks, listProjects, einkToday } from './tasks.js';
 import { createGroceryItem, listGroceryItems, listRecentGroceryItems, readdGroceryItem, updateGroceryItem, clearCheckedGroceryItems, deleteGroceryItem, quickAdd } from './grocery.js';
 import { runTodoCommand } from './discordParser.js';
@@ -13,7 +13,8 @@ export function createApp() {
   app.use(express.json());
   app.use(express.static('public'));
 
-  const page = name => (_req, res) => res.sendFile(`${process.cwd()}/public/index.html`);
+  const indexHtml = fileURLToPath(new URL('../public/index.html', import.meta.url));
+  const page = () => (_req, res) => res.sendFile(indexHtml);
   app.get('/login', loginPage);
   app.get(['/inbox', '/today', '/future', '/grocery', '/projects', '/done'], requirePageAuth, page());
 
