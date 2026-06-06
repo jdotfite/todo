@@ -9,7 +9,7 @@ let activeModules = [];
 function todayString() { return new Date().toISOString().slice(0, 10); }
 function routeView() {
   const path = location.pathname;
-  if (path === '/' || path === '/home') return { key: 'home', title: 'Home', subtitle: 'Today at a glance for the whole household.', home: true };
+  if (path === '/' || path === '/home') return { key: 'home', title: 'Home', subtitle: '', home: true };
   if (path === '/today') return { key: 'today', title: 'Today', subtitle: 'Due today, overdue, or intentionally undated.', query: 'view=today', filters: true };
   if (path === '/future') return { key: 'future', title: 'Future', subtitle: 'Scheduled tasks that are not ready for today yet.', future: true, filters: true };
   if (path === '/grocery') return { key: 'grocery', title: 'Grocery', grocery: true };
@@ -94,7 +94,7 @@ function summaryCards(tasks) {
 function viewHeader(title, subtitle = '', showFilters = false, count = null) {
   const mobileTitle = title === 'Today' ? 'Today’s Task' : title;
   const countLabel = Number.isInteger(count) ? ` (${count})` : '';
-  const eyebrow = title === 'Home' ? 'Household Hub' : title === 'Family Calendar' ? 'Family Calendar' : title === 'Documents' ? 'Household Documents' : 'Personal tasks';
+  const eyebrow = title === 'Home' ? 'Fite Family Hub' : title === 'Family Calendar' ? 'Family Calendar' : title === 'Documents' ? 'Household Documents' : title === 'Today' ? 'Daily tasks' : 'Personal tasks';
   return `<div class="mobile-appbar" aria-label="Mobile navigation"><button type="button" onclick="history.length > 1 ? history.back() : location.href='/home'" aria-label="Back">‹</button></div>
     ${mobileCategoryNav()}
     <div class="view-header"><div><p class="eyebrow">${escapeHtml(eyebrow)}</p><h2>${escapeHtml(title)}</h2><h2 class="mobile-page-title">${escapeHtml(mobileTitle)}<span>${countLabel}</span></h2>${subtitle ? `<p>${escapeHtml(subtitle)}</p><p class="mobile-modified">Last modified: Today</p>` : ''}</div>${showFilters ? filterBar() : ''}</div>`;
@@ -108,6 +108,7 @@ function mobileCategoryNav() {
     { href: '/calendar', navLabel: 'Calendar' },
     { href: '/grocery', navLabel: 'Grocery' },
     { href: '/documents', navLabel: 'Docs' },
+    { href: '/chat', navLabel: 'Chat' },
     { href: '/inbox', navLabel: 'Inbox' },
     { href: '/future', navLabel: 'Future' },
     { href: '/done', navLabel: 'Done' },
@@ -587,7 +588,7 @@ async function renderTips() {
   const today = new Date().toISOString().slice(0, 10);
   const [summary, { entries }, breakdown] = await Promise.all([api('/api/tips/summary'), api('/api/tips'), api('/api/tips/breakdown')]);
   const fmt = n => '$' + Number(n).toFixed(2).replace(/\.00$/, '');
-  content.innerHTML = viewHeader('Tips', `${entries.length} shift${entries.length === 1 ? '' : 's'} logged.`) + `
+  content.innerHTML = viewHeader('Tips', `${entries.length} tip${entries.length === 1 ? '' : 's'} logged.`) + `
     <section class="tips-summary-grid">
       <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(fmt(summary.thisWeek))}</span><small>This week</small></div>
       <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(fmt(summary.thisMonth))}</span><small>This month</small></div>
@@ -772,7 +773,7 @@ async function renderChat() {
   setActiveNav();
   setBodyView('chat');
   const { threads } = await api('/api/chat/threads');
-  content.innerHTML = viewHeader('Chat', 'Household message board.') + `
+  content.innerHTML = viewHeader('Family Chat', 'Household message board — everyone can post and read.') + `
     <div class="chat-layout">
       <section class="chat-thread-list" id="chat-thread-list">
         <div class="chat-thread-header">
