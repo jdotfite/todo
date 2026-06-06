@@ -606,31 +606,23 @@ async function renderTips() {
     <section class="tips-summary-grid">
       <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(fmt(summary.thisWeek))}</span><small>This week</small></div>
       <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(fmt(summary.thisMonth))}</span><small>This month</small></div>
-      <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(fmt(summary.avgPerShift))}</span><small>Avg / shift</small></div>
+      <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(fmt(summary.avgPerTip))}</span><small>Avg / tip</small></div>
     </section>
     ${entries.length ? `<div class="tips-export-row"><a class="tips-export-btn" href="/api/tips/export.csv" download="tips-export.csv">↓ Export CSV</a></div>` : ''}
     ${tipsBreakdownHtml(breakdown)}
     <section class="hub-panel tips-log-panel">
-      <header><h3>Log Shift</h3></header>
+      <header><h3>Log a Tip</h3></header>
       <form id="tips-form" class="tips-form">
         <div class="tips-form-row">
           <label>Date<input type="date" name="date" value="${escapeAttribute(today)}" required></label>
-          <label>Shift<select name="shiftType"><option value="day">Day</option><option value="night">Night</option><option value="double">Double</option><option value="weekend">Weekend</option><option value="other">Other</option></select></label>
-          <label>Location<input type="text" name="location" placeholder="e.g. Main St"></label>
-        </div>
-        <div class="tips-form-row">
-          <label>Cash&nbsp;$<input type="number" name="cashTips" placeholder="0" step="0.01" min="0" value="0"></label>
-          <label>Card&nbsp;$<input type="number" name="cardTips" placeholder="0" step="0.01" min="0" value="0"></label>
-          <label>Hours<input type="number" name="hours" placeholder="—" step="0.5" min="0.5"></label>
-        </div>
-        <div class="tips-form-row tips-notes-row">
+          <label>Amount&nbsp;$<input type="number" name="amount" placeholder="0" step="0.01" min="0" value="" required></label>
           <label class="tips-notes-label">Notes<input type="text" name="notes" placeholder="Optional…"></label>
-          <button type="submit" class="tips-submit-btn">Log shift</button>
+          <button type="submit" class="tips-submit-btn">Log tip</button>
         </div>
       </form>
     </section>
-    <div id="tips-shifts-list" class="tips-shifts">
-      ${entries.length ? entries.map(tipShiftHtml).join('') : '<div class="empty-state">No shifts logged yet. Use the form above to add your first shift.</div>'}
+    <div id="tips-list" class="tips-shifts">
+      ${entries.length ? entries.map(tipEntryHtml).join('') : '<div class="empty-state">No tips logged yet. Add your first tip above.</div>'}
     </div>`;
 
   $('#tips-form').onsubmit = async e => {
@@ -638,27 +630,22 @@ async function renderTips() {
     const fd = new FormData(e.currentTarget);
     const data = {
       date: fd.get('date'),
-      shiftType: fd.get('shiftType'),
-      location: fd.get('location') || '',
-      cashTips: parseFloat(fd.get('cashTips')) || 0,
-      cardTips: parseFloat(fd.get('cardTips')) || 0,
+      amount: parseFloat(fd.get('amount')) || 0,
       notes: fd.get('notes') || '',
     };
-    const hoursVal = fd.get('hours');
-    if (hoursVal) data.hours = parseFloat(hoursVal);
     await api('/api/tips', { method: 'POST', body: JSON.stringify(data) });
     renderTips();
   };
 
-  bindTipsShiftControls(entries);
+  bindTipsControls(entries);
 }
 
-function bindTipsShiftControls(entries) {
+function bindTipsControls(entries) {
   content.querySelectorAll('.tips-delete-btn').forEach(btn => {
     btn.onclick = async e => {
       const card = e.currentTarget.closest('.tips-shift');
       const id = card.dataset.id;
-      if (!confirm('Delete this shift?')) return;
+      if (!confirm('Delete this tip?')) return;
       await api(`/api/tips/${id}`, { method: 'DELETE' });
       renderTips();
     };
@@ -675,14 +662,9 @@ function bindTipsShiftControls(entries) {
         const fd = new FormData(ev.currentTarget);
         const data = {
           date: fd.get('date'),
-          shiftType: fd.get('shiftType'),
-          location: fd.get('location') || '',
-          cashTips: parseFloat(fd.get('cashTips')) || 0,
-          cardTips: parseFloat(fd.get('cardTips')) || 0,
+          amount: parseFloat(fd.get('amount')) || 0,
           notes: fd.get('notes') || '',
         };
-        const hoursVal = fd.get('hours');
-        if (hoursVal) data.hours = parseFloat(hoursVal);
         await api(`/api/tips/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
         renderTips();
       };
@@ -691,20 +673,14 @@ function bindTipsShiftControls(entries) {
   });
 }
 
-function tipShiftHtml(entry) {
-  const total = (Number(entry.cashTips) || 0) + (Number(entry.cardTips) || 0);
+function tipEntryHtml(entry) {
   const fmt = n => '$' + Number(n).toFixed(2).replace(/\.00$/, '');
-  const meta = [entry.shiftType, entry.location, entry.hours ? entry.hours + 'h' : ''].filter(Boolean).join(' · ');
   return `<article class="tips-shift" data-id="${escapeAttribute(entry.id)}">
     <div class="tips-shift-header">
-      <div><span class="tips-shift-date">${escapeHtml(formatDateLabel(entry.date))}</span><span class="tips-shift-meta">${escapeHtml(meta)}</span></div>
-      <span class="tips-shift-total">${escapeHtml(fmt(total))}</span>
+      <span class="tips-shift-date">${escapeHtml(formatDateLabel(entry.date))}</span>
+      <span class="tips-shift-total">${escapeHtml(fmt(entry.amount))}</span>
     </div>
-    <div class="tips-shift-breakdown">
-      <span>Cash ${escapeHtml(fmt(entry.cashTips))}</span>
-      <span>Card ${escapeHtml(fmt(entry.cardTips))}</span>
-      ${entry.notes ? `<span class="tips-shift-notes">${escapeHtml(entry.notes)}</span>` : ''}
-    </div>
+    ${entry.notes ? `<div class="tips-shift-breakdown"><span class="tips-shift-notes">${escapeHtml(entry.notes)}</span></div>` : ''}
     <div class="tips-shift-actions">
       <button type="button" class="tips-edit-btn">Edit</button>
       <button type="button" class="tips-delete-btn">Delete</button>
@@ -722,14 +698,14 @@ function tipsBreakdownHtml(breakdown) {
 
   const weekRows = breakdown.week
     .filter(d => d.count > 0)
-    .map(d => `<tr><td>${escapeHtml(d.label)}</td><td class="tip-num">${escapeHtml(fmt(d.total))}</td><td class="tip-num tip-muted">Cash ${escapeHtml(fmt(d.cash))}</td><td class="tip-num tip-muted">Card ${escapeHtml(fmt(d.card))}</td><td class="tip-num tip-muted">${d.hours ? d.hours + 'h' : ''}</td></tr>`)
+    .map(d => `<tr><td>${escapeHtml(d.label)}</td><td class="tip-num">${escapeHtml(fmt(d.total))}</td><td class="tip-num tip-muted">${d.count} tip${d.count === 1 ? '' : 's'}</td></tr>`)
     .join('');
 
   const monthRows = breakdown.month
     .map(w => {
       const startDate = new Date(w.start + 'T12:00:00Z');
       const label = 'Week of ' + startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-      return `<tr><td>${escapeHtml(label)}</td><td class="tip-num">${escapeHtml(fmt(w.total))}</td><td class="tip-num tip-muted">Cash ${escapeHtml(fmt(w.cash))}</td><td class="tip-num tip-muted">Card ${escapeHtml(fmt(w.card))}</td><td class="tip-num tip-muted">${w.hours ? w.hours + 'h' : ''}</td></tr>`;
+      return `<tr><td>${escapeHtml(label)}</td><td class="tip-num">${escapeHtml(fmt(w.total))}</td><td class="tip-num tip-muted">${w.count} tip${w.count === 1 ? '' : 's'}</td></tr>`;
     })
     .join('');
 
@@ -747,21 +723,11 @@ function tipsBreakdownHtml(breakdown) {
 }
 
 function tipEditFormHtml(entry) {
-  const shiftTypes = ['day', 'night', 'double', 'weekend', 'other'];
-  const opts = shiftTypes.map(st => `<option value="${st}"${entry.shiftType === st ? ' selected' : ''}>${st[0].toUpperCase() + st.slice(1)}</option>`).join('');
   return `<form class="tips-form tips-edit-form" data-id="${escapeAttribute(entry.id)}">
     <div class="tips-form-row">
       <label>Date<input type="date" name="date" value="${escapeAttribute(entry.date)}" required></label>
-      <label>Shift<select name="shiftType">${opts}</select></label>
-      <label>Location<input type="text" name="location" value="${escapeAttribute(entry.location)}"></label>
-    </div>
-    <div class="tips-form-row">
-      <label>Cash&nbsp;$<input type="number" name="cashTips" value="${escapeAttribute(entry.cashTips)}" step="0.01" min="0"></label>
-      <label>Card&nbsp;$<input type="number" name="cardTips" value="${escapeAttribute(entry.cardTips)}" step="0.01" min="0"></label>
-      <label>Hours<input type="number" name="hours" value="${escapeAttribute(entry.hours != null ? entry.hours : '')}" step="0.5" min="0.5" placeholder="—"></label>
-    </div>
-    <div class="tips-form-row tips-notes-row">
-      <label class="tips-notes-label">Notes<input type="text" name="notes" value="${escapeAttribute(entry.notes)}"></label>
+      <label>Amount&nbsp;$<input type="number" name="amount" value="${escapeAttribute(entry.amount)}" step="0.01" min="0" required></label>
+      <label class="tips-notes-label">Notes<input type="text" name="notes" value="${escapeAttribute(entry.notes || '')}"></label>
       <div class="tips-edit-btns">
         <button type="submit">Save</button>
         <button type="button" class="tips-edit-cancel">Cancel</button>
