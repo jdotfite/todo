@@ -21,7 +21,16 @@ function emptyStore() {
   };
 }
 
+const PROFILE_LEGACY = { wife: 'kari' };
+function migrateProfileId(id) { return PROFILE_LEGACY[id] || id; }
+
 function normalizeStore(store) {
+  const tipEntries = (Array.isArray(store?.tipEntries) ? store.tipEntries : [])
+    .map(e => e.profileId && PROFILE_LEGACY[e.profileId] ? { ...e, profileId: migrateProfileId(e.profileId) } : e);
+  const chatMessages = (Array.isArray(store?.chatMessages) ? store.chatMessages : [])
+    .map(m => m.profileId && PROFILE_LEGACY[m.profileId] ? { ...m, profileId: migrateProfileId(m.profileId) } : m);
+  const chatReads = (Array.isArray(store?.chatReads) ? store.chatReads : [])
+    .map(r => r.profileId && PROFILE_LEGACY[r.profileId] ? { ...r, profileId: migrateProfileId(r.profileId) } : r);
   return {
     ...emptyStore(),
     ...(store && typeof store === 'object' ? store : {}),
@@ -29,10 +38,10 @@ function normalizeStore(store) {
     modules: Array.isArray(store?.modules) ? store.modules : [],
     tasks: Array.isArray(store?.tasks) ? store.tasks : [],
     groceryItems: Array.isArray(store?.groceryItems) ? store.groceryItems : [],
-    tipEntries: Array.isArray(store?.tipEntries) ? store.tipEntries : [],
+    tipEntries,
     chatThreads: Array.isArray(store?.chatThreads) ? store.chatThreads : [],
-    chatMessages: Array.isArray(store?.chatMessages) ? store.chatMessages : [],
-    chatReads: Array.isArray(store?.chatReads) ? store.chatReads : [],
+    chatMessages,
+    chatReads,
   };
 }
 

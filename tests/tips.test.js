@@ -30,7 +30,7 @@ test('tip entries can be created, listed, updated, and deleted', async () => {
 
   const entry = await createTipEntry({ date: '2025-03-15', amount: 42, notes: 'great client' });
   assert.ok(entry.id);
-  assert.equal(entry.profileId, 'wife');
+  assert.equal(entry.profileId, 'kari');
   assert.equal(entry.date, '2025-03-15');
   assert.equal(entry.amount, 42);
   assert.equal(entry.notes, 'great client');

@@ -4,7 +4,7 @@ export const calendarModule = {
   navLabel: 'Calendar',
   href: '/calendar',
   icon: '📅',
-  profiles: ['family', 'justin', 'wife'],
+  profiles: ['family', 'justin', 'kari'],
   routes: ['/calendar'],
   apiBase: '/api/calendar',
 };

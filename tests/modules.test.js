@@ -16,7 +16,7 @@ test('static household modules registry describes existing first-party modules',
   assert.equal(calendar.label, 'Calendar');
   assert.equal(calendar.href, '/calendar');
   assert.equal(calendar.apiBase, '/api/calendar');
-  assert.deepEqual(calendar.profiles, ['family', 'justin', 'wife']);
+  assert.deepEqual(calendar.profiles, ['family', 'justin', 'kari']);
 
   const documents = findModuleById('documents');
   assert.equal(documents.navLabel, 'Docs');
@@ -34,12 +34,12 @@ test('static household modules registry describes existing first-party modules',
 
   const tips = findModuleById('tips');
   assert.equal(tips.href, '/tips');
-  assert.deepEqual(tips.profiles, ['wife']);
+  assert.deepEqual(tips.profiles, ['kari']);
   assert.ok(appPageRoutes.includes('/tips'));
 
   const chat = findModuleById('chat');
   assert.equal(chat.href, '/chat');
-  assert.deepEqual(chat.profiles, ['family', 'justin', 'wife']);
+  assert.deepEqual(chat.profiles, ['family', 'justin', 'kari', 'cohen', 'hudson']);
   assert.ok(appPageRoutes.includes('/chat'));
 });
 

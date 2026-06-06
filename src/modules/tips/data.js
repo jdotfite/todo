@@ -5,7 +5,7 @@ function normalizeTipEntry(row) {
   if (!row) return null;
   return {
     id: row.id,
-    profileId: row.profileId || 'wife',
+    profileId: row.profileId || 'kari',
     date: row.date,
     amount: Number(row.amount) || 0,
     notes: row.notes || '',
@@ -47,7 +47,7 @@ export async function createTipEntry(input = {}) {
   const timestamp = nowIso();
   const entry = normalizeTipEntry({
     id: nanoid(12),
-    profileId: 'wife',
+    profileId: 'kari',
     date: input.date,
     amount: Number(input.amount) || 0,
     notes: input.notes || '',
@@ -80,7 +80,7 @@ export async function updateTipEntry(id, input = {}) {
   const errMsg = validateEntry(merged);
   if (errMsg) throw apiError(errMsg, 400);
 
-  const updated = normalizeTipEntry({ ...merged, id: current.id, profileId: 'wife', updatedAt: nowIso() });
+  const updated = normalizeTipEntry({ ...merged, id: current.id, profileId: 'kari', updatedAt: nowIso() });
   store.tipEntries[index] = updated;
   await writeStore(store);
   return updated;

@@ -79,13 +79,13 @@ test('thread list includes latest message preview metadata', async () => {
   const thread = await createThread({ title: 'Dinner' });
 
   await postMessage(thread.id, { profileId: 'justin', body: 'First idea' });
-  await postMessage(thread.id, { profileId: 'wife', body: 'Latest dinner plan for tonight' });
+  await postMessage(thread.id, { profileId: 'kari', body: 'Latest dinner plan for tonight' });
 
   const [listed] = await listThreads();
   assert.equal(listed.id, thread.id);
   assert.equal(listed.messageCount, 2);
   assert.equal(listed.lastMessage.body, 'Latest dinner plan for tonight');
-  assert.equal(listed.lastMessage.profileId, 'wife');
+  assert.equal(listed.lastMessage.profileId, 'kari');
   assert.ok(listed.lastMessage.createdAt);
 });
 
@@ -94,7 +94,7 @@ test('thread list exposes profile-aware unread counts and markThreadRead clears 
   const thread = await createThread({ title: 'Updates' });
 
   await postMessage(thread.id, { profileId: 'justin', body: 'My own note' });
-  await postMessage(thread.id, { profileId: 'wife', body: 'Please read this' });
+  await postMessage(thread.id, { profileId: 'kari', body: 'Please read this' });
 
   let [listed] = await listThreads({ profileId: 'justin' });
   assert.equal(listed.unreadCount, 1);
@@ -106,12 +106,12 @@ test('thread list exposes profile-aware unread counts and markThreadRead clears 
   assert.equal(listed.hasUnread, false);
   assert.ok(listed.lastReadAt);
 
-  await postMessage(thread.id, { profileId: 'wife', body: 'One more thing' });
+  await postMessage(thread.id, { profileId: 'kari', body: 'One more thing' });
   [listed] = await listThreads({ profileId: 'justin' });
   assert.equal(listed.unreadCount, 1);
 
   const displayedBoundary = listed.lastReadAt;
-  await postMessage(thread.id, { profileId: 'wife', body: 'Message after displayed snapshot' });
+  await postMessage(thread.id, { profileId: 'kari', body: 'Message after displayed snapshot' });
   await markThreadRead(thread.id, 'justin', { lastReadAt: displayedBoundary });
   [listed] = await listThreads({ profileId: 'justin' });
   assert.equal(listed.unreadCount, 2);
@@ -192,7 +192,7 @@ test('messages within a thread are returned oldest-first', async () => {
   await resetForTests();
   const thread = await createThread({ title: 'Chat' });
   await postMessage(thread.id, { profileId: 'justin', body: 'First' });
-  await postMessage(thread.id, { profileId: 'wife', body: 'Second' });
+  await postMessage(thread.id, { profileId: 'kari', body: 'Second' });
   await postMessage(thread.id, { profileId: 'family', body: 'Third' });
 
   const messages = await listMessages(thread.id);
@@ -369,7 +369,7 @@ test('getRecentMessages returns messages newest-first with threadTitle attached'
   await resetForTests();
   const thread = await createThread({ title: 'General' });
   await postMessage(thread.id, { profileId: 'justin', body: 'First' });
-  await postMessage(thread.id, { profileId: 'wife', body: 'Second' });
+  await postMessage(thread.id, { profileId: 'kari', body: 'Second' });
 
   const recent = await getRecentMessages(5);
   assert.equal(recent.length, 2);

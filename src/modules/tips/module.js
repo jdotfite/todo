@@ -4,7 +4,7 @@ export const tipsModule = {
   navLabel: 'Tips',
   href: '/tips',
   icon: '💵',
-  profiles: ['wife'],
+  profiles: ['kari'],
   routes: ['/tips'],
   apiBase: '/api/tips',
 };

@@ -1,7 +1,8 @@
 import { nanoid } from 'nanoid';
 import { nowIso, readStore, writeStore } from '../../db.js';
 
-const VALID_PROFILE_IDS = new Set(['family', 'justin', 'wife']);
+const VALID_PROFILE_IDS = new Set(['family', 'justin', 'kari', 'cohen', 'hudson']);
+const PROFILE_ALIAS = { wife: 'kari' };
 
 function normalizeThread(row) {
   if (!row) return null;
@@ -27,7 +28,8 @@ function normalizeMessage(row) {
 }
 
 function normalizeProfileId(profileId) {
-  return VALID_PROFILE_IDS.has(profileId) ? profileId : 'family';
+  const id = PROFILE_ALIAS[profileId] || profileId;
+  return VALID_PROFILE_IDS.has(id) ? id : 'family';
 }
 
 function readKey(threadId, profileId) {

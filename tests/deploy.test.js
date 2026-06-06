@@ -91,7 +91,7 @@ test('pin login page and auth endpoint use the household PIN', async () => {
     let res = await fetch(`${base}/login`);
     assert.equal(res.status, 200);
     const html = await res.text();
-    assert.match(html, /Household PIN/);
+    assert.match(html, /profile-grid/);
     assert.match(html, /inputmode="numeric"/);
     assert.match(html, /maxlength="4"/);
 

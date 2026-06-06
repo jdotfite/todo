@@ -4,7 +4,7 @@ export const documentsModule = {
   navLabel: 'Docs',
   href: '/documents',
   icon: '📄',
-  profiles: ['family', 'justin', 'wife'],
+  profiles: ['family', 'justin', 'kari'],
   routes: ['/documents'],
   apiBase: '/api/documents',
 };

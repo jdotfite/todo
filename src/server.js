@@ -5,7 +5,7 @@ import { einkToday } from './modules/tasks/data.js';
 import { runTodoCommand } from './discordParser.js';
 import { alexaRoute } from './alexa.js';
 import { einkDashboard } from './einkDashboard.js';
-import { authStatus, login, loginPage, logout, requireEinkAuth, requireHouseholdAuth, requirePageAuth } from './auth.js';
+import { authStatus, login, loginPage, logout, profileLogin, requireEinkAuth, requireHouseholdAuth, requirePageAuth } from './auth.js';
 import { registerCalendarRoutes } from './modules/calendar/api.js';
 import { registerDocumentRoutes } from './modules/documents/api.js';
 import { registerTipsRoutes } from './modules/tips/api.js';
@@ -29,6 +29,7 @@ export function createApp() {
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
   app.get('/api/auth/status', authStatus);
   app.post('/api/auth/login', login);
+  app.post('/api/auth/profile-login', profileLogin);
   app.post('/api/auth/logout', logout);
 
   app.use('/api/eink', requireEinkAuth);

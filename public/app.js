@@ -480,7 +480,27 @@ async function renderSettings() {
   setBodyView('settings');
   const { calendars, events } = await api('/api/calendar');
   const hidden = hiddenCalendarSourceIds();
+  const { profiles: settingsProfiles } = await api('/api/profiles').catch(() => ({ profiles: [] }));
   content.innerHTML = viewHeader('Settings', 'Personalize this device without changing the family source of truth.') + `
+    <section class="settings-card">
+      <header><div><p class="eyebrow">Profiles</p><h3>Avatars</h3><p>Avatars are stored on the server and shown on the login screen.</p></div></header>
+      <div class="settings-profiles-grid">${settingsProfiles.map(p => {
+        const color = p.color || PROFILE_COLORS[p.id] || '#ffd60a';
+        const initial = (p.name || p.id)[0].toUpperCase();
+        const avatarEl = p.avatar
+          ? `<img src="${escapeAttribute(p.avatar)}" alt="${escapeHtml(p.name)}" class="settings-avatar-img">`
+          : `<span class="settings-avatar-initial" style="background:${escapeAttribute(color)}">${escapeHtml(initial)}</span>`;
+        return `<div class="settings-profile-row">
+          <div class="settings-avatar-wrap">${avatarEl}</div>
+          <span class="settings-profile-name">${escapeHtml(p.name)}</span>
+          <label class="settings-avatar-upload-btn">
+            ${p.avatar ? 'Change' : 'Upload'}
+            <input type="file" accept="image/*" class="profile-avatar-upload" data-profile-id="${escapeAttribute(p.id)}" style="display:none">
+          </label>
+          ${p.avatar ? `<button type="button" class="profile-avatar-clear settings-avatar-clear-btn" data-profile-id="${escapeAttribute(p.id)}">Remove</button>` : ''}
+        </div>`;
+      }).join('')}</div>
+    </section>
     <section class="settings-card">
       <header><div><p class="eyebrow">Calendar Sources</p><h3>Show or hide calendars</h3><p>These toggles are saved on this browser only. Private iCal URLs stay on the server.</p></div><a href="/calendar">View calendar →</a></header>
       <div class="settings-calendar-list">${(calendars || []).length ? calendars.map(source => `<div class="settings-calendar-row">${calendarSourceChip(source)}<small>${(events || []).filter(event => event.sourceId === source.id).length} upcoming</small></div>`).join('') : '<div class="empty-state">No calendar sources configured.</div>'}</div>
@@ -488,6 +508,31 @@ async function renderSettings() {
     </section>`;
   bindCalendarSourceToggles();
   $('#show-all-calendars')?.addEventListener('click', () => { saveHiddenCalendarSourceIds(new Set()); renderSettings(); });
+
+  content.querySelectorAll('.profile-avatar-upload').forEach(input => {
+    input.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const id = input.dataset.profileId;
+      const reader = new FileReader();
+      reader.onload = async ev => {
+        const dataUrl = ev.target.result;
+        try {
+          await api(`/api/profiles/${encodeURIComponent(id)}/avatar`, { method: 'PATCH', body: JSON.stringify({ avatar: dataUrl }) });
+          renderSettings();
+        } catch (err) { alert('Upload failed: ' + (err?.message || 'unknown error')); }
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  content.querySelectorAll('.profile-avatar-clear').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.profileId;
+      await api(`/api/profiles/${encodeURIComponent(id)}/avatar`, { method: 'PATCH', body: JSON.stringify({ avatar: null }) });
+      renderSettings();
+    });
+  });
 }
 
 async function renderDocuments() {
@@ -848,7 +893,7 @@ function chatThreadItemHtml(thread) {
   </div>`;
 }
 
-const PROFILE_COLORS = { justin: '#7dd3fc', wife: '#f0abfc', family: '#ffd60a' };
+const PROFILE_COLORS = { justin: '#7dd3fc', kari: '#f0abfc', cohen: '#86efac', hudson: '#fb7185', family: '#ffd60a', wife: '#f0abfc' };
 
 function chatMessageHtml(msg, threadId) {
   const color = PROFILE_COLORS[msg.profileId] || '#ffd60a';
@@ -991,6 +1036,15 @@ function profileOptionHtml(profile) {
   return `<option value="${escapeAttribute(profile.id)}" ${activeProfile?.id === profile.id ? 'selected' : ''}>${escapeHtml(profile.name)}</option>`;
 }
 
+function profileAvatarHtml(profile, size = 28) {
+  const color = profile.color || PROFILE_COLORS[profile.id] || '#ffd60a';
+  const initial = (profile.name || profile.id || '?')[0].toUpperCase();
+  if (profile.avatar) {
+    return `<img class="profile-avatar-img" src="${escapeAttribute(profile.avatar)}" alt="${escapeHtml(profile.name)}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover">`;
+  }
+  return `<span class="profile-avatar-dot" style="background:${escapeAttribute(color)};width:${size}px;height:${size}px;font-size:${Math.round(size * 0.46)}px">${escapeHtml(initial)}</span>`;
+}
+
 async function loadProfileChrome() {
   const [{ profiles }, moduleState] = await Promise.all([
     api('/api/profiles'),
@@ -1008,6 +1062,9 @@ async function loadProfileChrome() {
     };
   });
   const pill = document.querySelector('.profile-pill');
+  if (pill && activeProfile) {
+    pill.innerHTML = profileAvatarHtml(activeProfile, 22) + '<span>' + escapeHtml(activeProfile.name) + '</span>';
+  }
   if (pill) pill.textContent = activeProfile.name;
 }
 
