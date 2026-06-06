@@ -5,7 +5,7 @@ let draggedId = null;
 let quickReaddDeleteMode = false;
 let activeProfile = null;
 let activeModules = [];
-const APP_ROUTES = new Set(['/home', '/today', '/future', '/grocery', '/calendar', '/documents', '/work', '/tips', '/chat', '/settings', '/done', '/projects', '/inbox']);
+const APP_ROUTES = new Set(['/home', '/today', '/future', '/grocery', '/calendar', '/documents', '/work', '/chat', '/settings', '/done', '/projects', '/inbox']);
 
 function todayString() { return new Date().toISOString().slice(0, 10); }
 function appRoutePath(pathname) { return pathname === '/' ? '/home' : pathname; }
@@ -19,7 +19,6 @@ function routeView() {
   if (path === '/calendar') return { key: 'calendar', title: 'Family Calendar', calendar: true };
   if (path === '/documents') return { key: 'documents', title: 'Documents', documents: true };
   if (path === '/work') return { key: 'work', title: 'Work', work: true };
-  if (path === '/tips') return { key: 'tips', title: 'Tips', tips: true };
   if (path === '/chat') return { key: 'chat', title: 'Chat', chat: true };
   if (path === '/settings') return { key: 'settings', title: 'Settings', settings: true };
   if (path === '/done') return { key: 'done', title: 'Done', subtitle: 'Completed tasks.', query: 'view=done' };
@@ -49,7 +48,6 @@ async function render() {
   if (view.calendar) return renderCalendar();
   if (view.documents) return renderDocuments();
   if (view.work) return renderWork();
-  if (view.tips) return renderTips();
   if (view.chat) return renderChat();
   if (view.settings) return renderSettings();
   if (view.projects) return renderProjects();

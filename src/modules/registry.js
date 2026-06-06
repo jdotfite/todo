@@ -2,7 +2,6 @@ import { calendarModule } from './calendar/module.js';
 import { documentsModule } from './documents/module.js';
 import { groceryModule } from './grocery/module.js';
 import { tasksModule } from './tasks/module.js';
-import { tipsModule } from './tips/module.js';
 import { workModule } from './work/module.js';
 import { chatModule } from './chat/module.js';
 
@@ -35,7 +34,6 @@ export const modules = [
   groceryModule,
   documentsModule,
   workModule,
-  tipsModule,
   chatModule,
   settingsModule,
 ];

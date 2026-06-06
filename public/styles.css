@@ -1916,9 +1916,11 @@ body[data-view="home"] .quick-add { grid-template-columns: 1fr auto; }
 body[data-view="calendar"] .quick-add,
 body[data-view="documents"] .quick-add,
 body[data-view="tips"] .quick-add,
+body[data-view="work"] .quick-add,
 body[data-view="chat"] .quick-add,
 body[data-view="settings"] .quick-add,
 body[data-view="grocery"] .quick-add { display: none; }
+body[data-view="work"] .fab-add { display: none !important; }
 body[data-view="calendar"] .fab-add::after,
 body[data-view="documents"] .fab-add::after { content: 'Add task'; }
 @media (max-width: 860px) {

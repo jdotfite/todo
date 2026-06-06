@@ -10,7 +10,7 @@ import { registerGroceryRoutes } from '../src/modules/grocery/api.js';
 
 test('static household modules registry describes existing first-party modules', () => {
   const ids = modules.map(module => module.id);
-  assert.deepEqual(ids, ['home', 'tasks', 'calendar', 'grocery', 'documents', 'work', 'tips', 'chat', 'settings']);
+  assert.deepEqual(ids, ['home', 'tasks', 'calendar', 'grocery', 'documents', 'work', 'chat', 'settings']);
 
   const calendar = findModuleById('calendar');
   assert.equal(calendar.label, 'Calendar');
@@ -32,10 +32,8 @@ test('static household modules registry describes existing first-party modules',
   assert.equal(grocery.apiBase, '/api/grocery');
   assert.deepEqual(grocery.routes, ['/grocery']);
 
-  const tips = findModuleById('tips');
-  assert.equal(tips.href, '/tips');
-  assert.deepEqual(tips.profiles, ['kari']);
-  assert.ok(appPageRoutes.includes('/tips'));
+  assert.equal(findModuleById('tips'), null);
+  assert.ok(!appPageRoutes.includes('/tips'));
 
   const work = findModuleById('work');
   assert.equal(work.href, '/work');

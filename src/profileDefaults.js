@@ -28,7 +28,7 @@ export const DEFAULT_PROFILES = [
     name: 'Kari',
     color: '#f0abfc',
     role: 'adult',
-    enabledModules: ['home', 'calendar', 'grocery', 'documents', 'work', 'tips', 'chat'],
+    enabledModules: ['home', 'calendar', 'grocery', 'documents', 'work', 'chat'],
     pinHash: hashPin('1323'),
     avatar: null,
   },
@@ -60,6 +60,10 @@ function normalizeProfile(profile, fallback = {}) {
   const enabledModules = Array.isArray(profile?.enabledModules) ? [...profile.enabledModules]
     : Array.isArray(fallback.enabledModules) ? [...fallback.enabledModules] : ['home'];
   if (id === 'kari' && enabledModules.includes('tips') && !enabledModules.includes('work')) enabledModules.splice(enabledModules.indexOf('tips'), 0, 'work');
+  if (id === 'kari') {
+    const legacyTipsIndex = enabledModules.indexOf('tips');
+    if (legacyTipsIndex !== -1) enabledModules.splice(legacyTipsIndex, 1);
+  }
   return {
     ...fallback,
     ...(profile && typeof profile === 'object' ? profile : {}),
