@@ -37,6 +37,8 @@ async function render() {
   await loadProfileChrome();
   setActiveNav();
   await refreshProjectOptions();
+  $('#add').onclick = addTask;
+  $('#new-title').placeholder = 'Capture task, grocery, note…';
   const view = routeView();
   setBodyView(view.key);
   if (view.home) return renderHome();
@@ -407,24 +409,42 @@ async function renderHome() {
   const upcoming = events.slice(0, 5);
   const activeGrocery = groceryItems.filter(i => !i.checked);
   const featuredDocs = documents.slice(0, 4);
-  content.innerHTML = viewHeader('Home', 'Family calendar, tasks, grocery, and docs in one sticky PWA.', false, todayTasks.length) + `
+  content.innerHTML = viewHeader('Home', '', false) + `
     <section class="hub-hero">
-      <div><p class="eyebrow">Household Hub</p><h3>${friendlyDate(new Date())}</h3><p>One clean place for the family source of truth. E-paper is now an output; this is the control center.</p></div>
-      <div class="quick-capture-card"><label for="hub-capture">Quick capture</label><div><input id="hub-capture" placeholder="task, grocery milk, note, reminder…"><button id="hub-capture-add">Capture</button></div><small>Routes grocery/walmart text automatically; everything else becomes a task for now.</small></div>
+      <div class="hub-hero-date">
+        <p class="eyebrow">Household Hub</p>
+        <h3>${friendlyDate(new Date())}</h3>
+        <p class="hub-hero-summary">${heroSummaryText(todayTasks, activeGrocery, upcoming)}</p>
+      </div>
+      <div class="hub-next-panel">${heroNextHtml(upcoming)}</div>
     </section>
     <section class="hub-grid">
-      ${hubPanel('Today', '/today', todayTasks.length ? todayTasks.map(t => `<li><span>☐</span><strong>${escapeHtml(t.title)}</strong></li>`).join('') : '<li class="muted-row">No pressing tasks.</li>')}
-      ${hubPanel('Family Calendar', '/calendar', upcoming.length ? upcoming.map(calendarEventRow).join('') : '<li class="muted-row">No upcoming events.</li>')}
-      ${hubPanel('Grocery', '/grocery', `<li><span>🛒</span><strong>${activeGrocery.length} open item${activeGrocery.length === 1 ? '' : 's'}</strong></li>${activeGrocery.slice(0, 4).map(i => `<li><span>•</span>${escapeHtml(i.quantity ? i.quantity + ' ' : '')}${escapeHtml(i.title)}</li>`).join('')}`)}
-      ${hubPanel('Documents', '/documents', featuredDocs.map(doc => `<li><span>${escapeHtml(doc.icon)}</span><strong>${escapeHtml(doc.title)}</strong><small>${escapeHtml(doc.category)}</small></li>`).join(''))}
-      ${hubPanel('Chat', '/chat', recentChat.length ? recentChat.map(m => `<li><span class="chat-avatar hub-chat-avatar" style="background:${escapeAttribute(PROFILE_COLORS[m.profileId] || '#ffd60a')}">${escapeHtml((m.profileId || 'f')[0].toUpperCase())}</span><span class="hub-chat-msg"><strong>${escapeHtml(m.threadTitle || 'Chat')}</strong> <span>${escapeHtml(m.body.length > 60 ? m.body.slice(0, 60) + '…' : m.body)}</span></span></li>`).join('') : '<li class="muted-row">No messages yet.</li>')}
+      ${hubPanel('Today', '/today', 'View tasks', todayTasks.length ? todayTasks.map(t => `<li><span>☐</span><strong>${escapeHtml(t.title)}</strong></li>`).join('') : '<li class="hub-empty-row">Nothing due today.</li>')}
+      ${hubPanel('Family Calendar', '/calendar', 'View calendar', upcoming.length ? upcoming.map(calendarEventRow).join('') : '<li class="hub-empty-row">No upcoming events.</li>')}
+      ${hubPanel('Grocery', '/grocery', 'Open list', activeGrocery.length ? activeGrocery.slice(0, 5).map(i => `<li><span>•</span>${escapeHtml(i.quantity ? i.quantity + ' ' : '')}${escapeHtml(i.title)}</li>`).join('') : '<li class="hub-empty-row">Grocery list is clear.</li>')}
+      ${hubPanel('Documents', '/documents', 'View docs', featuredDocs.map(doc => `<li><span>${escapeHtml(doc.icon)}</span><strong>${escapeHtml(doc.title)}</strong><small>${escapeHtml(doc.category)}</small></li>`).join(''))}
+      ${hubPanel('Family Chat', '/chat', 'Open chat', recentChat.length ? recentChat.map(m => `<li><span class="chat-avatar hub-chat-avatar" style="background:${escapeAttribute(PROFILE_COLORS[m.profileId] || '#ffd60a')}">${escapeHtml((m.profileId || 'f')[0].toUpperCase())}</span><span class="hub-chat-msg"><strong>${escapeHtml(m.threadTitle || 'Chat')}</strong> <span>${escapeHtml(m.body.length > 60 ? m.body.slice(0, 60) + '…' : m.body)}</span></span></li>`).join('') : '<li class="hub-empty-row">No family messages yet.</li>')}
     </section>`;
-  $('#hub-capture-add').onclick = quickCapture;
-  $('#hub-capture').addEventListener('keydown', e => { if (e.key === 'Enter') quickCapture(); });
+  $('#add').onclick = quickCapture;
+  $('#new-title').placeholder = 'Add anything: “milk”, “trash Monday”, “dentist Thursday 3pm”…';
 }
 
-function hubPanel(title, href, body) {
-  return `<article class="hub-panel"><header><h3>${escapeHtml(title)}</h3><a href="${href}">Open →</a></header><ul>${body}</ul></article>`;
+function hubPanel(title, href, linkLabel, body) {
+  return `<article class="hub-panel"><header><h3>${escapeHtml(title)}</h3><a class="hub-panel-link" href="${href}">${escapeHtml(linkLabel)} →</a></header><ul>${body}</ul></article>`;
+}
+
+function heroSummaryText(tasks, groceryItems, events) {
+  const parts = [];
+  parts.push(tasks.length === 0 ? 'Nothing due today.' : `${tasks.length} task${tasks.length === 1 ? '' : 's'} due today.`);
+  parts.push(groceryItems.length === 0 ? 'Grocery list is clear.' : `${groceryItems.length} item${groceryItems.length === 1 ? '' : 's'} on the grocery list.`);
+  return parts.join(' ');
+}
+
+function heroNextHtml(events) {
+  if (!events.length) return '<p class="hub-next-empty">No upcoming events scheduled.</p>';
+  const next = events[0];
+  const more = events.slice(1, 3);
+  return `<p class="eyebrow">Coming up</p><p class="hub-next-title">${escapeHtml(next.summary)}</p><p class="hub-next-meta">${escapeHtml(formatDateLabel(next.date))} · ${escapeHtml(next.time)}</p>${more.map(e => `<p class="hub-next-more">${escapeHtml(formatDateLabel(e.date))} — ${escapeHtml(e.summary)}</p>`).join('')}`;
 }
 
 async function quickCapture() {
@@ -456,7 +476,7 @@ async function renderCalendar() {
 }
 
 function calendarEventRow(event) {
-  return `<li><span style="color:${escapeAttribute(event.sourceColor || '#f6c944')}">📅</span><strong>${escapeHtml(event.summary)}</strong><small>${escapeHtml(formatDateLabel(event.date))} · ${escapeHtml(event.time)} · ${escapeHtml(event.sourceLabel || 'Calendar')}</small></li>`;
+  return `<li class="hub-cal-row"><span class="hub-event-date">${escapeHtml(formatDateLabel(event.date))}</span><strong>${escapeHtml(event.summary)}</strong><small>${escapeHtml(event.time)}</small></li>`;
 }
 
 function calendarEventCard(event) {
