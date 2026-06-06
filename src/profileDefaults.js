@@ -28,7 +28,7 @@ export const DEFAULT_PROFILES = [
     name: 'Kari',
     color: '#f0abfc',
     role: 'adult',
-    enabledModules: ['home', 'calendar', 'grocery', 'documents', 'tips', 'chat'],
+    enabledModules: ['home', 'calendar', 'grocery', 'documents', 'work', 'tips', 'chat'],
     pinHash: hashPin('1323'),
     avatar: null,
   },
@@ -57,6 +57,9 @@ const PROFILE_ALIAS = { wife: 'kari' };
 function normalizeProfile(profile, fallback = {}) {
   const id = String(profile?.id || fallback.id || '').trim().toLowerCase();
   const now = new Date().toISOString();
+  const enabledModules = Array.isArray(profile?.enabledModules) ? [...profile.enabledModules]
+    : Array.isArray(fallback.enabledModules) ? [...fallback.enabledModules] : ['home'];
+  if (id === 'kari' && enabledModules.includes('tips') && !enabledModules.includes('work')) enabledModules.splice(enabledModules.indexOf('tips'), 0, 'work');
   return {
     ...fallback,
     ...(profile && typeof profile === 'object' ? profile : {}),
@@ -64,8 +67,7 @@ function normalizeProfile(profile, fallback = {}) {
     name: String(profile?.name || fallback.name || id || 'Profile'),
     color: String(profile?.color || fallback.color || '#ffd60a'),
     role: String(profile?.role || fallback.role || 'adult'),
-    enabledModules: Array.isArray(profile?.enabledModules) ? profile.enabledModules
-      : Array.isArray(fallback.enabledModules) ? fallback.enabledModules : ['home'],
+    enabledModules,
     pinHash: profile?.pinHash !== undefined ? profile.pinHash : (fallback.pinHash ?? null),
     avatar: profile?.avatar !== undefined ? profile.avatar : (fallback.avatar ?? null),
     createdAt: profile?.createdAt || fallback.createdAt || now,

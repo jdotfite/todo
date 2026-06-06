@@ -15,22 +15,31 @@ The repo includes:
 - `api/index.js` Express serverless entrypoint.
 - `public/manifest.webmanifest` and `public/service-worker.js` for PWA installability.
 
-## 2. Add Vercel KV
+## 2. Add durable storage
 
-Create or attach a Vercel KV/Redis store, then add these environment variables to the project:
+For Vercel production, use Neon/Postgres by setting:
 
 ```text
-KV_REST_API_URL=...
-KV_REST_API_TOKEN=...
+DATABASE_URL=<neon pooled connection string>
 ```
 
 Optional:
 
 ```text
+TODO_POSTGRES_KEY=todo:store
+```
+
+The app creates an `app_store` table automatically and stores one normalized JSON document at that key. This matches the local JSON store shape, keeps imports/reviews atomic, and avoids relying on Vercel's ephemeral filesystem.
+
+Legacy Vercel KV/Upstash Redis storage is still supported if `DATABASE_URL` is not set:
+
+```text
+KV_REST_API_URL=...
+KV_REST_API_TOKEN=...
 TODO_KV_KEY=todo:store
 ```
 
-If `KV_REST_API_URL` and `KV_REST_API_TOKEN` are missing, the app falls back to local JSON file storage. That is fine for desktop development but not durable on Vercel serverless.
+If neither Postgres nor KV env vars are configured, the app falls back to local JSON file storage. That is fine for desktop development but not durable on Vercel serverless.
 
 ## 3. Add household auth
 

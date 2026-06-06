@@ -5,7 +5,7 @@ let draggedId = null;
 let quickReaddDeleteMode = false;
 let activeProfile = null;
 let activeModules = [];
-const APP_ROUTES = new Set(['/home', '/today', '/future', '/grocery', '/calendar', '/documents', '/tips', '/chat', '/settings', '/done', '/projects', '/inbox']);
+const APP_ROUTES = new Set(['/home', '/today', '/future', '/grocery', '/calendar', '/documents', '/work', '/tips', '/chat', '/settings', '/done', '/projects', '/inbox']);
 
 function todayString() { return new Date().toISOString().slice(0, 10); }
 function appRoutePath(pathname) { return pathname === '/' ? '/home' : pathname; }
@@ -18,6 +18,7 @@ function routeView() {
   if (path === '/grocery') return { key: 'grocery', title: 'Grocery', grocery: true };
   if (path === '/calendar') return { key: 'calendar', title: 'Family Calendar', calendar: true };
   if (path === '/documents') return { key: 'documents', title: 'Documents', documents: true };
+  if (path === '/work') return { key: 'work', title: 'Work', work: true };
   if (path === '/tips') return { key: 'tips', title: 'Tips', tips: true };
   if (path === '/chat') return { key: 'chat', title: 'Chat', chat: true };
   if (path === '/settings') return { key: 'settings', title: 'Settings', settings: true };
@@ -47,6 +48,7 @@ async function render() {
   if (view.home) return renderHome();
   if (view.calendar) return renderCalendar();
   if (view.documents) return renderDocuments();
+  if (view.work) return renderWork();
   if (view.tips) return renderTips();
   if (view.chat) return renderChat();
   if (view.settings) return renderSettings();
@@ -597,6 +599,264 @@ function formatDateLabel(date) {
 
 function friendlyDate(date) {
   return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+const WORK_PERIODS = [
+  ['today', 'Today'],
+  ['week', 'Week'],
+  ['month', 'Month'],
+  ['year', 'Year'],
+  ['all', 'All'],
+];
+let workPeriod = 'month';
+const workMoneyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const workCompactMoneyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+function workMoney(value, compact = false) {
+  const amount = Number(value || 0);
+  return (compact ? workCompactMoneyFormatter : workMoneyFormatter).format(amount);
+}
+
+function workPeriodStart(period, now = new Date()) {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  if (period === 'today') return d;
+  if (period === 'week') {
+    const day = d.getDay();
+    const mondayOffset = (day + 6) % 7;
+    d.setDate(d.getDate() - mondayOffset);
+    return d;
+  }
+  if (period === 'month') return new Date(d.getFullYear(), d.getMonth(), 1);
+  if (period === 'year') return new Date(d.getFullYear(), 0, 1);
+  return null;
+}
+
+function workEntriesForPeriod(entries, period) {
+  const start = workPeriodStart(period);
+  if (!start) return entries;
+  return entries.filter(entry => new Date(`${entry.date}T12:00:00`) >= start);
+}
+
+function summarizeWorkEntries(entries) {
+  const summary = entries.reduce((acc, entry) => {
+    acc.entryCount += 1;
+    acc.revenue += Number(entry.revenue || 0);
+    acc.payout += Number(entry.payout || 0);
+    acc.tips += Number(entry.tipAmount || 0);
+    acc.totalEarnings += Number(entry.totalEarnings || 0);
+    return acc;
+  }, { entryCount: 0, revenue: 0, payout: 0, tips: 0, totalEarnings: 0 });
+  return summary;
+}
+
+function workPeriodControlsHtml() {
+  return `<div class="work-period-tabs" aria-label="Work timeframe">${WORK_PERIODS.map(([value, label]) => `<button type="button" class="work-period-tab ${workPeriod === value ? 'active' : ''}" data-work-period="${escapeAttribute(value)}">${escapeHtml(label)}</button>`).join('')}</div>`;
+}
+
+async function renderWork() {
+  setActiveNav();
+  setBodyView('work');
+  const today = new Date().toISOString().slice(0, 10);
+  const [summary, { entries }, settingsResponse, importResponse] = await Promise.all([api('/api/work/summary'), api('/api/work'), api('/api/work/settings'), api('/api/work/import/batches')]);
+  const settings = settingsResponse.settings || { defaultCommissionRate: 0.1 };
+  const pct = n => `${Math.round(Number(n || 0) * 1000) / 10}%`;
+  const scopedEntries = workEntriesForPeriod(entries, workPeriod);
+  const scopedSummary = summarizeWorkEntries(scopedEntries);
+  const visibleEntries = scopedEntries.slice(0, 25);
+  const periodLabel = WORK_PERIODS.find(([value]) => value === workPeriod)?.[1] || 'Month';
+  content.innerHTML = viewHeader('Work', `${summary.entryCount.toLocaleString()} work entr${summary.entryCount === 1 ? 'y' : 'ies'} logged. Showing ${periodLabel.toLowerCase()} earnings first.`) + `
+    <section class="work-dashboard-tools">
+      ${workPeriodControlsHtml()}
+      ${entries.length ? `<div class="tips-export-row work-actions-row"><a class="tips-export-btn" href="/api/work/export.csv" download="work-export.csv">↓ Export CSV</a></div>` : ''}
+    </section>
+    <section class="tips-summary-grid work-summary-grid">
+      <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(workMoney(scopedSummary.revenue, true))}</span><small>Revenue · ${escapeHtml(periodLabel)}</small></div>
+      <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(workMoney(scopedSummary.payout, true))}</span><small>Payout</small></div>
+      <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(workMoney(scopedSummary.tips, true))}</span><small>Tips</small></div>
+      <div class="tip-stat"><span class="tip-stat-amount">${escapeHtml(workMoney(scopedSummary.totalEarnings, true))}</span><small>Total earnings</small></div>
+    </section>
+    <p class="work-history-note">All-time: ${escapeHtml(workMoney(summary.revenue))} revenue · ${escapeHtml(workMoney(summary.payout))} payout · ${escapeHtml(workMoney(summary.tips))} tips.</p>
+    <section class="hub-panel tips-log-panel work-log-panel">
+      <header><h3>Log work</h3><small>Default commission ${escapeHtml(pct(settings.defaultCommissionRate))}</small></header>
+      <form id="work-form" class="tips-form work-form">
+        <div class="tips-form-row work-form-grid">
+          <label class="work-field-date">Date<input type="date" name="date" value="${escapeAttribute(today)}" required></label>
+          <label class="work-field-client">Client<input type="text" name="clientName" placeholder="Client name"></label>
+          <label class="work-field-service">Service/Product<input type="text" name="serviceName" placeholder="IPL, peel, product…"></label>
+          <label>Revenue&nbsp;$<input type="number" name="revenue" placeholder="0" step="0.01" min="0" required></label>
+          <label>Tip&nbsp;$<input type="number" name="tipAmount" placeholder="0" step="0.01" min="0"></label>
+          <label>Tip type<select name="tipType"><option value=""></option>${(settings.tipTypes || ['Cash', 'Tippy', 'Venmo', 'Other']).map(type => `<option value="${escapeAttribute(type)}">${escapeHtml(type)}</option>`).join('')}</select></label>
+          <button type="submit" class="tips-submit-btn">Save work</button>
+          <details class="work-advanced-fields">
+            <summary>Advanced fields</summary>
+            <div>
+              <label>Rate&nbsp;%<input type="number" name="commissionRatePercent" value="${escapeAttribute(String(Math.round(settings.defaultCommissionRate * 1000) / 10))}" step="0.1" min="0" max="100"></label>
+              <label>Deductions&nbsp;$<input type="number" name="deductions" placeholder="0" step="0.01" min="0"></label>
+              <label class="tips-notes-label">Notes<input type="text" name="notes" placeholder="Optional…"></label>
+            </div>
+          </details>
+        </div>
+      </form>
+    </section>
+    ${workChartsHtml(summary)}
+    ${workImportPanelHtml(importResponse.batches || [])}
+    <section class="work-recent-section">
+      <header><h3>Recent entries</h3><small>${scopedEntries.length.toLocaleString()} in ${escapeHtml(periodLabel.toLowerCase())}${scopedEntries.length > visibleEntries.length ? ` · showing latest ${visibleEntries.length}` : ''}</small></header>
+      <div id="work-list" class="tips-shifts work-shifts">
+        ${visibleEntries.length ? visibleEntries.map(workEntryHtml).join('') : '<div class="empty-state">No work entries in this timeframe yet.</div>'}
+      </div>
+    </section>`;
+
+  $('#work-form').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const data = {
+      date: fd.get('date'),
+      clientName: fd.get('clientName') || '',
+      serviceName: fd.get('serviceName') || '',
+      revenue: parseFloat(fd.get('revenue')) || 0,
+      commissionRate: (parseFloat(fd.get('commissionRatePercent')) || 0) / 100,
+      deductions: parseFloat(fd.get('deductions')) || 0,
+      tipAmount: parseFloat(fd.get('tipAmount')) || 0,
+      tipType: fd.get('tipType') || '',
+      notes: fd.get('notes') || '',
+    };
+    await api('/api/work', { method: 'POST', body: JSON.stringify(data) });
+    renderWork();
+  };
+
+  bindWorkControls(visibleEntries);
+  bindWorkImportControls();
+  content.querySelectorAll('[data-work-period]').forEach(btn => {
+    btn.onclick = () => {
+      workPeriod = btn.dataset.workPeriod;
+      renderWork();
+    };
+  });
+}
+
+function workImportPanelHtml(batches = []) {
+  const defaultPaths = [
+    '/home/agent/.hermes/cache/documents/doc_78fef06f7088_2023_Commission_Spreadsheet.xlsx',
+    '/home/agent/.hermes/cache/documents/doc_01440aefb993_2024_Commission_Spreadsheet.xlsx',
+    '/home/agent/.hermes/cache/documents/doc_9e7b3bebda79_2025_Commission_Spreadsheet.xlsx',
+    '/home/agent/.hermes/cache/documents/doc_f0627a89bf12_2026_Commission_Spreadsheet.xlsx',
+  ].join('\n');
+  const latest = batches[0];
+  const latestSummary = latest ? importBatchSummaryHtml(latest) : 'No import batch staged yet.';
+  return `<details class="hub-panel work-import-panel">
+    <summary><span><strong>Spreadsheet import</strong><small>${escapeHtml(latestSummary)}</small></span><span class="work-import-chevron">Admin</span></summary>
+    <p class="work-import-help">Dry-run spreadsheet paths here only when migrating or rechecking historical workbooks.</p>
+    <textarea id="work-import-paths" rows="4" spellcheck="false">${escapeHtml(defaultPaths)}</textarea>
+    <div class="work-import-actions">
+      <button type="button" id="work-import-dry-run" class="tips-submit-btn">Dry-run import</button>
+      ${latest ? `<button type="button" id="work-import-open" data-batch-id="${escapeAttribute(latest.id)}">Review latest batch</button>` : ''}
+    </div>
+    <div id="work-import-status" class="tips-shift-breakdown">${escapeHtml(latestSummary)}</div>
+    <div id="work-import-review"></div>
+  </details>`;
+}
+
+function importBatchSummaryHtml(batch) {
+  const s = batch.summary || {};
+  return `Latest batch: ${(s.totalRows || 0).toLocaleString()} rows · ${(s.readyRows || 0).toLocaleString()} ready · ${(s.reviewRows || 0).toLocaleString()} need review · ${(s.duplicateRows || 0).toLocaleString()} duplicates · ${(s.committedRows || 0).toLocaleString()} committed`;
+}
+
+async function loadWorkImportBatch(batchId) {
+  const { batch } = await api(`/api/work/import/batches/${encodeURIComponent(batchId)}`);
+  const reviewRows = (batch.rows || []).filter(row => ['needs_review', 'approved'].includes(row.status)).slice(0, 20);
+  const review = $('#work-import-review');
+  review.innerHTML = `<div class="tips-shift-breakdown">${escapeHtml(importBatchSummaryHtml(batch))}</div>
+    ${reviewRows.length ? reviewRows.map(row => workImportRowHtml(batch.id, row)).join('') : '<div class="empty-state">No review rows. This batch is ready to commit.</div>'}
+    <div class="work-import-actions"><button type="button" id="work-import-commit" data-batch-id="${escapeAttribute(batch.id)}" class="tips-submit-btn">Commit ready rows</button></div>`;
+  bindWorkImportReviewControls();
+}
+
+function workImportRowHtml(batchId, row) {
+  const entry = row.entry || {};
+  const suggested = row.suggestedDate ? ` Suggested: ${row.suggestedDate}` : '';
+  return `<article class="tips-shift work-import-row" data-batch-id="${escapeAttribute(batchId)}" data-row-id="${escapeAttribute(row.id)}">
+    <div class="tips-shift-header"><span>${escapeHtml(entry.date || 'No date')} <span class="badge waiting">${escapeHtml(row.status)}</span></span><span>${escapeHtml(entry.sourceSheet || '')} #${escapeHtml(entry.sourceRow || '')}</span></div>
+    <div class="tips-shift-breakdown"><strong>${escapeHtml(entry.clientName || 'No client')}</strong> · ${escapeHtml(entry.serviceName || 'No service')}</div>
+    <div class="tips-shift-breakdown">${escapeHtml((row.problems || []).join(', ') + suggested)}</div>
+    <div class="tips-shift-actions"><button type="button" class="work-import-approve">Approve suggested date</button><button type="button" class="work-import-skip">Skip</button></div>
+  </article>`;
+}
+
+function bindWorkImportControls() {
+  const dryRun = $('#work-import-dry-run');
+  if (dryRun) dryRun.onclick = async () => {
+    const paths = $('#work-import-paths').value.split(/\n+/).map(path => path.trim()).filter(Boolean);
+    $('#work-import-status').textContent = 'Running dry-run import…';
+    const { batch } = await api('/api/work/import/dry-run', { method: 'POST', body: JSON.stringify({ paths }) });
+    $('#work-import-status').textContent = importBatchSummaryHtml(batch);
+    await loadWorkImportBatch(batch.id);
+  };
+  const open = $('#work-import-open');
+  if (open) open.onclick = () => loadWorkImportBatch(open.dataset.batchId);
+}
+
+function bindWorkImportReviewControls() {
+  content.querySelectorAll('.work-import-approve').forEach(btn => {
+    btn.onclick = async e => {
+      const card = e.currentTarget.closest('.work-import-row');
+      const { batchId, rowId } = card.dataset;
+      await api(`/api/work/import/batches/${encodeURIComponent(batchId)}/rows/${encodeURIComponent(rowId)}`, { method: 'PATCH', body: JSON.stringify({ status: 'approved', useSuggestedDate: true }) });
+      await loadWorkImportBatch(batchId);
+    };
+  });
+  content.querySelectorAll('.work-import-skip').forEach(btn => {
+    btn.onclick = async e => {
+      const card = e.currentTarget.closest('.work-import-row');
+      const { batchId, rowId } = card.dataset;
+      await api(`/api/work/import/batches/${encodeURIComponent(batchId)}/rows/${encodeURIComponent(rowId)}`, { method: 'PATCH', body: JSON.stringify({ status: 'skipped' }) });
+      await loadWorkImportBatch(batchId);
+    };
+  });
+  const commit = $('#work-import-commit');
+  if (commit) commit.onclick = async () => {
+    const batchId = commit.dataset.batchId;
+    const result = await api(`/api/work/import/batches/${encodeURIComponent(batchId)}/commit`, { method: 'POST', body: JSON.stringify({}) });
+    alert(`Committed ${result.committed} work entries.`);
+    renderWork();
+  };
+}
+
+function workChartsHtml(summary) {
+  const serviceRows = (summary.topServices || []).slice(0, 5).map(service => `<tr><td>${escapeHtml(service.serviceName)}</td><td class="tip-num">${escapeHtml(workMoney(service.revenue))}</td><td class="tip-num tip-muted">${Number(service.count || 0).toLocaleString()}</td></tr>`).join('');
+  const tipRows = Object.entries(summary.tipsByType || {}).map(([type, amount]) => `<tr><td>${escapeHtml(type)}</td><td class="tip-num">${escapeHtml(workMoney(amount))}</td></tr>`).join('');
+  if (!serviceRows && !tipRows) return '';
+  return `<div class="tips-breakdown work-breakdown">
+    ${serviceRows ? `<section class="tips-breakdown-section"><h4>Top services</h4><table class="tips-breakdown-table"><tbody>${serviceRows}</tbody></table></section>` : ''}
+    ${tipRows ? `<section class="tips-breakdown-section"><h4>Tips by type</h4><table class="tips-breakdown-table"><tbody>${tipRows}</tbody></table></section>` : ''}
+  </div>`;
+}
+
+function bindWorkControls(entries) {
+  content.querySelectorAll('.work-delete-btn').forEach(btn => {
+    btn.onclick = async e => {
+      const card = e.currentTarget.closest('.work-entry');
+      const id = card.dataset.id;
+      if (!confirm('Delete this work entry?')) return;
+      await api(`/api/work/${id}`, { method: 'DELETE' });
+      renderWork();
+    };
+  });
+}
+
+function workEntryHtml(entry) {
+  const rate = Math.round(Number(entry.commissionRate || 0) * 1000) / 10;
+  return `<article class="tips-shift work-entry" data-id="${escapeAttribute(entry.id)}">
+    <div class="tips-shift-header">
+      <span><span class="tips-shift-date">${escapeHtml(formatDateLabel(entry.date))}</span> ${entry.needsReview ? '<span class="badge waiting">Needs review</span>' : ''}</span>
+      <span class="tips-shift-total">${escapeHtml(workMoney(entry.totalEarnings))}</span>
+    </div>
+    <div class="tips-shift-breakdown"><strong>${escapeHtml(entry.clientName || 'No client')}</strong> · ${escapeHtml(entry.serviceName || 'No service')}</div>
+    <div class="tips-shift-breakdown">Revenue ${escapeHtml(workMoney(entry.revenue))} · Rate ${escapeHtml(String(rate))}% · Commission ${escapeHtml(workMoney(entry.commissionAmount))} · Payout ${escapeHtml(workMoney(entry.payout))}${entry.tipAmount ? ` · Tip ${escapeHtml(workMoney(entry.tipAmount))} ${escapeHtml(entry.tipType || '')}` : ''}</div>
+    ${entry.notes ? `<div class="tips-shift-breakdown"><span class="tips-shift-notes">${escapeHtml(entry.notes)}</span></div>` : ''}
+    <div class="tips-shift-actions"><button type="button" class="work-delete-btn">Delete</button></div>
+  </article>`;
 }
 
 async function renderTips() {

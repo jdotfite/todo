@@ -5,6 +5,24 @@ import { dirname, resolve } from 'node:path';
 const fallbackDbPath = process.env.VERCEL ? '/tmp/todo.json' : './data/todo.json';
 export const dbPath = resolve(process.env.TODO_DB || fallbackDbPath);
 const kvKey = process.env.TODO_KV_KEY || 'todo:store';
+const postgresKey = process.env.TODO_POSTGRES_KEY || 'todo:store';
+let postgresSql;
+
+function postgresConnectionString() {
+  return process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+}
+
+function postgresEnabled() {
+  return Boolean(postgresConnectionString());
+}
+
+async function getPostgresSql() {
+  if (!postgresSql) {
+    const { neon } = await import('@neondatabase/serverless');
+    postgresSql = neon(postgresConnectionString());
+  }
+  return postgresSql;
+}
 
 import { normalizeProfiles } from './profileDefaults.js';
 
@@ -15,6 +33,13 @@ function emptyStore() {
     tasks: [],
     groceryItems: [],
     tipEntries: [],
+    workEntries: [],
+    workSettings: {
+      defaultCommissionRate: 0.1,
+      serviceRateRules: [],
+      tipTypes: ['Cash', 'Tippy', 'Venmo', 'Other'],
+    },
+    workImportBatches: [],
     chatThreads: [],
     chatMessages: [],
     chatReads: [],
@@ -26,6 +51,8 @@ function migrateProfileId(id) { return PROFILE_LEGACY[id] || id; }
 
 function normalizeStore(store) {
   const tipEntries = (Array.isArray(store?.tipEntries) ? store.tipEntries : [])
+    .map(e => e.profileId && PROFILE_LEGACY[e.profileId] ? { ...e, profileId: migrateProfileId(e.profileId) } : e);
+  const workEntries = (Array.isArray(store?.workEntries) ? store.workEntries : [])
     .map(e => e.profileId && PROFILE_LEGACY[e.profileId] ? { ...e, profileId: migrateProfileId(e.profileId) } : e);
   const chatMessages = (Array.isArray(store?.chatMessages) ? store.chatMessages : [])
     .map(m => m.profileId && PROFILE_LEGACY[m.profileId] ? { ...m, profileId: migrateProfileId(m.profileId) } : m);
@@ -39,6 +66,9 @@ function normalizeStore(store) {
     tasks: Array.isArray(store?.tasks) ? store.tasks : [],
     groceryItems: Array.isArray(store?.groceryItems) ? store.groceryItems : [],
     tipEntries,
+    workEntries,
+    workSettings: store?.workSettings && typeof store.workSettings === 'object' ? store.workSettings : emptyStore().workSettings,
+    workImportBatches: Array.isArray(store?.workImportBatches) ? store.workImportBatches : [],
     chatThreads: Array.isArray(store?.chatThreads) ? store.chatThreads : [],
     chatMessages,
     chatReads,
@@ -46,7 +76,7 @@ function normalizeStore(store) {
 }
 
 function kvEnabled() {
-  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return !postgresEnabled() && Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }
 
 async function kvRequest(command, ...args) {
@@ -61,6 +91,22 @@ async function kvRequest(command, ...args) {
 }
 
 export async function migrate() {
+  if (postgresEnabled()) {
+    const sql = await getPostgresSql();
+    await sql`
+      CREATE TABLE IF NOT EXISTS app_store (
+        key text PRIMARY KEY,
+        value jsonb NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `;
+    await sql`
+      INSERT INTO app_store (key, value)
+      VALUES (${postgresKey}, ${JSON.stringify(emptyStore())}::jsonb)
+      ON CONFLICT (key) DO NOTHING
+    `;
+    return;
+  }
   if (kvEnabled()) {
     const { result } = await kvRequest('get', kvKey);
     if (!result) await writeStore(emptyStore());
@@ -72,6 +118,12 @@ export async function migrate() {
 
 export async function readStore() {
   try {
+    if (postgresEnabled()) {
+      const sql = await getPostgresSql();
+      const rows = await sql`SELECT value FROM app_store WHERE key = ${postgresKey} LIMIT 1`;
+      if (!rows.length) return emptyStore();
+      return normalizeStore(rows[0].value);
+    }
     if (kvEnabled()) {
       const { result } = await kvRequest('get', kvKey);
       if (!result) return emptyStore();
@@ -86,6 +138,17 @@ export async function readStore() {
 
 export async function writeStore(store) {
   const normalized = normalizeStore(store);
+  if (postgresEnabled()) {
+    const sql = await getPostgresSql();
+    await sql`
+      INSERT INTO app_store (key, value, updated_at)
+      VALUES (${postgresKey}, ${JSON.stringify(normalized)}::jsonb, now())
+      ON CONFLICT (key) DO UPDATE SET
+        value = EXCLUDED.value,
+        updated_at = EXCLUDED.updated_at
+    `;
+    return;
+  }
   if (kvEnabled()) {
     await kvRequest('set', kvKey, JSON.stringify(normalized));
     return;

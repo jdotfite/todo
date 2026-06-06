@@ -4,7 +4,7 @@ Personal todo system scaffolded for the Office desktop `_websites/todo` folder.
 
 Architecture:
 
-- **SQLite database** is the source of truth.
+- **Local JSON locally; Neon/Postgres on Vercel** is the source of truth.
 - **Task API** owns all task mutations and queries.
 - **Discord/Hermes** is only a quick-capture interface.
 - **Web app** is for organizing and editing.
@@ -15,7 +15,6 @@ Architecture:
 
 ```bash
 npm install
-npm run init-db
 npm start
 ```
 
@@ -24,7 +23,7 @@ Default server: <http://localhost:3456>
 Override with environment variables:
 
 ```bash
-PORT=3456 TODO_DB=./data/todo.sqlite npm start
+PORT=3456 TODO_DB=./data/todo.json npm start
 ```
 
 ## Discord command parser API
@@ -94,16 +93,16 @@ Supported initial Alexa intent names:
 - `ListGroceryIntent`
 - `ListTodosIntent`
 
-Next deployment step: configure durable Vercel KV storage before relying on Vercel for production data.
+Next deployment step: configure durable Neon/Postgres storage before relying on Vercel for production data.
 
-Set these environment variables in Vercel:
+Set this environment variable in Vercel:
 
-- `KV_REST_API_URL`
-- `KV_REST_API_TOKEN`
-- Optional: `TODO_KV_KEY` defaults to `todo:store`
+- `DATABASE_URL` — Neon pooled connection string
+- Optional: `TODO_POSTGRES_KEY` defaults to `todo:store`
+- Optional legacy fallback: `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `TODO_KV_KEY`
 - Optional: `ALEXA_API_TOKEN` protects Alexa requests
 
-Without KV env vars, the app falls back to local JSON storage for desktop/local development.
+Without Postgres/KV env vars, the app falls back to local JSON storage for desktop/local development.
 
 ## E-ink JSON
 

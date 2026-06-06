@@ -68,13 +68,16 @@ test('db migration converts wife profileId to kari in tipEntries and chatMessage
   assert.equal(store.chatMessages[0].profileId, 'kari');
 });
 
-test('profile-aware modules hide tips for Justin and show tips for Kari', async () => {
+test('profile-aware modules hide Kari-only earnings modules for Justin and show them for Kari', async () => {
   await resetForTests();
   const justinModules = await modulesForProfile('justin');
   const kariModules = await modulesForProfile('kari');
 
   assert.equal(justinModules.some(m => m.id === 'tips'), false);
+  assert.equal(justinModules.some(m => m.id === 'work'), false);
   assert.equal(kariModules.some(m => m.id === 'tips'), true);
+  assert.equal(kariModules.some(m => m.id === 'work'), true);
+  assert.ok(kariModules.some(m => m.href === '/work'));
   assert.ok(kariModules.some(m => m.href === '/tips'));
 });
 
@@ -106,6 +109,7 @@ test('profile API defaults to family and can switch the active profile with a si
     res = await fetch(`${base}/api/modules`, { headers: { cookie } });
     body = await res.json();
     assert.equal(body.profile.id, 'kari');
+    assert.ok(body.modules.some(m => m.id === 'work'));
     assert.ok(body.modules.some(m => m.id === 'tips'));
   });
 });
