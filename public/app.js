@@ -823,11 +823,9 @@ function bindWorkImportReviewControls() {
 
 function workChartsHtml(summary) {
   const serviceRows = (summary.topServices || []).slice(0, 5).map(service => `<tr><td>${escapeHtml(service.serviceName)}</td><td class="tip-num">${escapeHtml(workMoney(service.revenue))}</td><td class="tip-num tip-muted">${Number(service.count || 0).toLocaleString()}</td></tr>`).join('');
-  const tipRows = Object.entries(summary.tipsByType || {}).map(([type, amount]) => `<tr><td>${escapeHtml(type)}</td><td class="tip-num">${escapeHtml(workMoney(amount))}</td></tr>`).join('');
-  if (!serviceRows && !tipRows) return '';
+  if (!serviceRows) return '';
   return `<div class="tips-breakdown work-breakdown">
-    ${serviceRows ? `<section class="tips-breakdown-section"><h4>Top services</h4><table class="tips-breakdown-table"><tbody>${serviceRows}</tbody></table></section>` : ''}
-    ${tipRows ? `<section class="tips-breakdown-section"><h4>Tips by type</h4><table class="tips-breakdown-table"><tbody>${tipRows}</tbody></table></section>` : ''}
+    <section class="tips-breakdown-section"><h4>Top services</h4><table class="tips-breakdown-table"><tbody>${serviceRows}</tbody></table></section>
   </div>`;
 }
 
