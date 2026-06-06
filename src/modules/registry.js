@@ -16,6 +16,17 @@ export const homeModule = {
   apiBase: null,
 };
 
+export const settingsModule = {
+  id: 'settings',
+  label: 'Settings',
+  navLabel: 'Settings',
+  href: '/settings',
+  icon: '⚙️',
+  profiles: ['family', 'justin', 'wife'],
+  routes: ['/settings'],
+  apiBase: null,
+};
+
 export const modules = [
   homeModule,
   tasksModule,
@@ -24,6 +35,7 @@ export const modules = [
   documentsModule,
   tipsModule,
   chatModule,
+  settingsModule,
 ];
 
 export const appPageRoutes = modules.flatMap(module => module.routes);

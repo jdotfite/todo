@@ -10,7 +10,7 @@ import { registerGroceryRoutes } from '../src/modules/grocery/api.js';
 
 test('static household modules registry describes existing first-party modules', () => {
   const ids = modules.map(module => module.id);
-  assert.deepEqual(ids, ['home', 'tasks', 'calendar', 'grocery', 'documents', 'tips', 'chat']);
+  assert.deepEqual(ids, ['home', 'tasks', 'calendar', 'grocery', 'documents', 'tips', 'chat', 'settings']);
 
   const calendar = findModuleById('calendar');
   assert.equal(calendar.label, 'Calendar');
@@ -45,19 +45,29 @@ test('static household modules registry describes existing first-party modules',
 
 test('calendar module owns calendar data and route registration', async () => {
   const previousIcalUrl = process.env.GOOGLE_CALENDAR_ICAL_URL;
+  const previousIcalUrls = process.env.GOOGLE_CALENDAR_ICAL_URLS;
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
-  const ics = `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:module-calendar-1\nDTSTART;VALUE=DATE:${tomorrow}\nSUMMARY:Module calendar event\nEND:VEVENT\nEND:VCALENDAR\n`;
+  const dayAfter = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
+  const personalIcs = `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:personal-calendar-1\nDTSTART;VALUE=DATE:${tomorrow}\nSUMMARY:Personal calendar event\nEND:VEVENT\nEND:VCALENDAR\n`;
+  const familyIcs = `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:family-calendar-1\nDTSTART;VALUE=DATE:${dayAfter}\nSUMMARY:Family calendar event\nEND:VEVENT\nEND:VCALENDAR\n`;
 
-  process.env.GOOGLE_CALENDAR_ICAL_URL = `data:text/calendar,${encodeURIComponent(ics)}`;
+  delete process.env.GOOGLE_CALENDAR_ICAL_URL;
+  process.env.GOOGLE_CALENDAR_ICAL_URLS = JSON.stringify([
+    { id: 'personal', label: 'Personal', color: '#f6c944', url: `data:text/calendar,${encodeURIComponent(personalIcs)}` },
+    { id: 'family', label: 'Family', color: '#7dd3fc', url: `data:text/calendar,${encodeURIComponent(familyIcs)}` },
+  ]);
 
   try {
-    const events = await calendarEvents({ respectEnabled: false });
-    assert.equal(events.length, 1);
-    assert.equal(events[0].id, 'module-calendar-1');
-    assert.equal(events[0].summary, 'Module calendar event');
+    const { events, calendars } = await calendarEvents({ respectEnabled: false, includeCalendars: true });
+    assert.equal(events.length, 2);
+    assert.deepEqual(calendars.map(calendar => calendar.id), ['personal', 'family']);
+    assert.equal(events[0].sourceId, 'personal');
+    assert.equal(events[0].sourceLabel, 'Personal');
+    assert.equal(events[1].sourceId, 'family');
     assert.equal(typeof registerCalendarRoutes, 'function');
   } finally {
     if (previousIcalUrl === undefined) delete process.env.GOOGLE_CALENDAR_ICAL_URL; else process.env.GOOGLE_CALENDAR_ICAL_URL = previousIcalUrl;
+    if (previousIcalUrls === undefined) delete process.env.GOOGLE_CALENDAR_ICAL_URLS; else process.env.GOOGLE_CALENDAR_ICAL_URLS = previousIcalUrls;
   }
 });
 

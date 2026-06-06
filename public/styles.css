@@ -2151,3 +2151,21 @@ body[data-view="documents"] .fab-add::after { content: 'Add task'; }
   .chat-back-btn { display: inline-block; }
   .chat-compose textarea { font-size: 16px; } /* prevent iOS zoom */
 }
+
+
+.calendar-source-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.calendar-source-row > a { color: var(--accent); font-size: 12px; text-decoration: none; }
+.calendar-source-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: rgba(255,255,255,.035); color: var(--text); border-radius: 999px; padding: 8px 11px; font-size: 12px; cursor: pointer; }
+.calendar-source-chip input { accent-color: var(--accent); }
+.calendar-source-chip span { width: 10px; height: 10px; border-radius: 50%; background: var(--source-color, var(--accent)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--source-color, var(--accent)) 22%, transparent); }
+.calendar-event { border-left: 3px solid var(--source-color, var(--accent)); }
+.calendar-event small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.settings-card { border: 1px solid var(--border); background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025)); border-radius: 24px; padding: 18px; box-shadow: var(--shadow); }
+.settings-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.settings-card header h3 { margin: 0 0 5px; }
+.settings-card header p { margin: 0; color: var(--muted); max-width: 56ch; }
+.settings-card header a { color: var(--accent); text-decoration: none; font-size: 13px; white-space: nowrap; }
+.settings-calendar-list { display: grid; gap: 10px; }
+.settings-calendar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--border); border-radius: 16px; padding: 10px; background: rgba(0,0,0,.16); }
+.settings-calendar-row small { color: var(--muted); }
+#show-all-calendars { margin-top: 14px; border: 0; border-radius: 999px; background: var(--accent); color: #111; padding: 10px 14px; font-weight: 800; }

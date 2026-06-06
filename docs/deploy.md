@@ -80,17 +80,26 @@ The query-string form is easier for the first manual Alexa Developer Console set
 
 ## 5. Add Google Calendar for the e-paper dashboard
 
-The `/api/eink/dashboard` endpoint includes a `calendar` array for the next few days.
+The `/api/eink/dashboard` endpoint includes a `calendar` array for the next few days, and `/api/calendar` powers the Household Hub calendar/settings UI.
 
-For Vercel, the simplest private read-only setup is the Family calendar's **secret iCal URL**:
+For Vercel, the simplest private read-only setup is one calendar's **secret iCal URL**:
 
 ```text
 GOOGLE_CALENDAR_ICAL_URL=<secret-google-calendar-ical-url>
 ```
 
-Google Calendar path: Calendar settings → select the Family calendar → **Integrate calendar** → copy **Secret address in iCal format**. Keep this URL private; anyone with it can read that calendar.
+For multiple calendars, set `GOOGLE_CALENDAR_ICAL_URLS` to JSON. Do not commit real URLs:
 
-Local/Hermes fallback uses the Google Workspace OAuth token on this machine:
+```json
+[
+  { "id": "primary", "label": "Justin", "color": "#f6c944", "url": "<secret-primary-ical-url>" },
+  { "id": "family", "label": "Family", "color": "#7dd3fc", "url": "<secret-family-ical-url>" }
+]
+```
+
+Google Calendar path: Calendar settings → select a calendar → **Integrate calendar** → copy **Secret address in iCal format**. Keep these URLs private; anyone with one can read that calendar. The Hub Settings page can hide/show configured calendar sources per device using browser storage.
+
+Local/Hermes fallback uses the Google Workspace OAuth token on this machine if no iCal env var is configured:
 
 ```text
 FAMILY_CALENDAR_ID=family12925651382350424080@group.calendar.google.com

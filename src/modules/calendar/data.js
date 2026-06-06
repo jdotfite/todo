@@ -52,7 +52,56 @@ function parseIcsDate(value) {
   return { date: d.toISOString().slice(0, 10), allDay: false, startMs: d.getTime(), iso: d.toISOString() };
 }
 
-function parseIcsCalendar(text, now = new Date(), days = CALENDAR_DAYS, max = CALENDAR_MAX) {
+function slugCalendarId(label, index) {
+  return String(label || `calendar-${index + 1}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `calendar-${index + 1}`;
+}
+
+function normalizeCalendarSource(source, index = 0) {
+  if (!source?.url) return null;
+  const label = String(source.label || source.name || (index === 0 ? 'Calendar' : `Calendar ${index + 1}`));
+  return {
+    id: String(source.id || slugCalendarId(label, index)),
+    label,
+    color: source.color || ['#f6c944', '#7dd3fc', '#f0abfc', '#86efac', '#fb7185'][index % 5],
+    url: String(source.url),
+  };
+}
+
+function defaultCalendarSource() {
+  return normalizeCalendarSource({
+    id: process.env.GOOGLE_CALENDAR_ICAL_ID || 'primary',
+    label: process.env.GOOGLE_CALENDAR_ICAL_LABEL || 'Primary',
+    color: process.env.GOOGLE_CALENDAR_ICAL_COLOR || '#f6c944',
+    url: process.env.GOOGLE_CALENDAR_ICAL_URL,
+  }, 0);
+}
+
+function calendarSourcesFromEnv() {
+  const multi = process.env.GOOGLE_CALENDAR_ICAL_URLS;
+  if (multi) {
+    try {
+      const parsed = JSON.parse(multi);
+      if (Array.isArray(parsed)) return parsed.map(normalizeCalendarSource).filter(Boolean);
+    } catch {
+      return multi.split(/\n+/).map((line, index) => {
+        const [label, url, color] = line.split('|').map(part => part?.trim());
+        return normalizeCalendarSource({ label, url, color }, index);
+      }).filter(Boolean);
+    }
+  }
+  const single = defaultCalendarSource();
+  return single ? [single] : [];
+}
+
+function publicCalendarSource(source) {
+  return source ? { id: source.id, label: source.label, color: source.color } : null;
+}
+
+function calendarEventsResult(events, calendars, includeCalendars) {
+  return includeCalendars ? { events, calendars: calendars.map(publicCalendarSource).filter(Boolean) } : events;
+}
+
+function parseIcsCalendar(text, now = new Date(), days = CALENDAR_DAYS, max = CALENDAR_MAX, source = defaultCalendarSource()) {
   const lines = unfoldIcs(text);
   const events = [];
   let current = null;
@@ -81,21 +130,34 @@ function parseIcsCalendar(text, now = new Date(), days = CALENDAR_DAYS, max = CA
       summary: event.summary,
       date: event.start.date,
       time: event.start.allDay ? 'All day' : eventTimeLabel({ start: { dateTime: event.start.iso } }),
+      sourceId: source?.id || 'primary',
+      sourceLabel: source?.label || 'Primary',
+      sourceColor: source?.color || '#f6c944',
     }));
 }
 
-async function calendarEventsFromIcs() {
-  const url = process.env.GOOGLE_CALENDAR_ICAL_URL;
-  if (!url) return null;
+async function calendarEventsFromIcsSource(source) {
+  if (!source?.url) return [];
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'family-eink-dashboard/1.0' } });
+    const res = await fetch(source.url, { signal: controller.signal, headers: { 'User-Agent': 'family-eink-dashboard/1.0' } });
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    return parseIcsCalendar(await res.text());
+    return parseIcsCalendar(await res.text(), new Date(), CALENDAR_DAYS, CALENDAR_MAX, source);
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function calendarEventsFromIcsSources() {
+  const sources = calendarSourcesFromEnv();
+  if (!sources.length) return null;
+  const settled = await Promise.allSettled(sources.map(source => calendarEventsFromIcsSource(source)));
+  const events = settled.flatMap(result => result.status === 'fulfilled' ? result.value : []);
+  return {
+    events: events.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)).slice(0, CALENDAR_MAX),
+    calendars: sources,
+  };
 }
 
 async function calendarEventsFromGoogleApi() {
@@ -111,21 +173,26 @@ async function calendarEventsFromGoogleApi() {
     '--max', String(CALENDAR_MAX),
   ], { timeout: 15000, maxBuffer: 1024 * 1024 });
   const parsed = JSON.parse(stdout);
+  const source = { id: 'google-api', label: 'Family', color: '#7dd3fc' };
   return parsed.map(event => ({
     id: event.id,
     summary: event.summary || '(untitled)',
     date: eventDateKey(event),
     time: eventTimeLabel(event),
+    sourceId: source.id,
+    sourceLabel: source.label,
+    sourceColor: source.color,
   })).filter(event => event.summary);
 }
 
-export async function calendarEvents({ respectEnabled = true } = {}) {
+export async function calendarEvents({ respectEnabled = true, includeCalendars = false } = {}) {
   try {
-    if (respectEnabled && process.env.EINK_CALENDAR_ENABLED === 'false') return [];
-    const icsEvents = await calendarEventsFromIcs();
-    if (icsEvents) return icsEvents;
-    return await calendarEventsFromGoogleApi();
+    if (respectEnabled && process.env.EINK_CALENDAR_ENABLED === 'false') return calendarEventsResult([], [], includeCalendars);
+    const icsResult = await calendarEventsFromIcsSources();
+    if (icsResult) return calendarEventsResult(icsResult.events, icsResult.calendars, includeCalendars);
+    const apiEvents = await calendarEventsFromGoogleApi();
+    return calendarEventsResult(apiEvents, [{ id: 'google-api', label: 'Family', color: '#7dd3fc' }], includeCalendars);
   } catch (err) {
-    return [];
+    return calendarEventsResult([], [], includeCalendars);
   }
 }

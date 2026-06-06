@@ -1,19 +1,13 @@
 import { nanoid } from 'nanoid';
 import { nowIso, readStore, writeStore } from '../../db.js';
 
-const shiftTypes = new Set(['day', 'night', 'double', 'weekend', 'other']);
-
 function normalizeTipEntry(row) {
   if (!row) return null;
   return {
     id: row.id,
     profileId: row.profileId || 'wife',
     date: row.date,
-    shiftType: shiftTypes.has(row.shiftType) ? row.shiftType : 'other',
-    location: row.location || '',
-    cashTips: Number(row.cashTips) || 0,
-    cardTips: Number(row.cardTips) || 0,
-    hours: row.hours != null ? Number(row.hours) : null,
+    amount: Number(row.amount) || 0,
     notes: row.notes || '',
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -33,17 +27,9 @@ function validateEntry(input) {
   if (!validDateString(input.date)) {
     return 'date must be a valid YYYY-MM-DD string';
   }
-  const cashTips = Number(input.cashTips);
-  if (input.cashTips !== undefined && (!Number.isFinite(cashTips) || cashTips < 0)) {
-    return 'cashTips must be a non-negative number';
-  }
-  const cardTips = Number(input.cardTips);
-  if (input.cardTips !== undefined && (!Number.isFinite(cardTips) || cardTips < 0)) {
-    return 'cardTips must be a non-negative number';
-  }
-  if (input.hours != null) {
-    const hours = Number(input.hours);
-    if (!Number.isFinite(hours) || hours <= 0) return 'hours must be a positive number';
+  if (input.amount !== undefined) {
+    const amount = Number(input.amount);
+    if (!Number.isFinite(amount) || amount < 0) return 'amount must be a non-negative number';
   }
   return null;
 }
@@ -63,11 +49,7 @@ export async function createTipEntry(input = {}) {
     id: nanoid(12),
     profileId: 'wife',
     date: input.date,
-    shiftType: input.shiftType || 'other',
-    location: input.location || '',
-    cashTips: Number(input.cashTips) || 0,
-    cardTips: Number(input.cardTips) || 0,
-    hours: input.hours != null ? Number(input.hours) : null,
+    amount: Number(input.amount) || 0,
     notes: input.notes || '',
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -121,8 +103,7 @@ export async function getTipSummary() {
   const weekStart = d.toISOString().slice(0, 10);
   const monthPrefix = today.slice(0, 7);
 
-  const shiftTotal = e => (Number(e.cashTips) || 0) + (Number(e.cardTips) || 0);
-  const sum = arr => arr.reduce((s, e) => s + shiftTotal(e), 0);
+  const sum = arr => arr.reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const round2 = n => Math.round(n * 100) / 100;
 
   const allTotal = sum(entries);
@@ -130,14 +111,14 @@ export async function getTipSummary() {
     total: round2(allTotal),
     thisWeek: round2(sum(entries.filter(e => e.date >= weekStart))),
     thisMonth: round2(sum(entries.filter(e => e.date.startsWith(monthPrefix)))),
-    avgPerShift: round2(entries.length ? allTotal / entries.length : 0),
+    avgPerTip: round2(entries.length ? allTotal / entries.length : 0),
     entryCount: entries.length,
   };
 }
 
 export async function exportTipsCsv() {
   const entries = await listTipEntries();
-  const headers = ['date', 'shift_type', 'location', 'cash_tips', 'card_tips', 'total', 'hours', 'notes'];
+  const headers = ['date', 'amount', 'notes'];
   const neutralizeCsvFormula = v => {
     const text = String(v ?? '');
     return /^[\s\t\r]*[=+\-@]/.test(text) ? `'${text}` : text;
@@ -145,16 +126,7 @@ export async function exportTipsCsv() {
   const csvCell = v => `"${neutralizeCsvFormula(v).replace(/"/g, '""')}"`;
   const rows = [headers.map(csvCell).join(',')];
   for (const e of entries) {
-    rows.push([
-      e.date,
-      e.shiftType,
-      e.location,
-      e.cashTips,
-      e.cardTips,
-      ((Number(e.cashTips) || 0) + (Number(e.cardTips) || 0)).toFixed(2),
-      e.hours ?? '',
-      e.notes,
-    ].map(csvCell).join(','));
+    rows.push([e.date, e.amount, e.notes].map(csvCell).join(','));
   }
   return rows.join('\n');
 }
@@ -174,14 +146,11 @@ export async function getTipBreakdown() {
     d.setDate(weekStartDate.getDate() + i);
     const dateStr = d.toISOString().slice(0, 10);
     const dayEntries = entries.filter(e => e.date === dateStr);
-    const total = dayEntries.reduce((s, e) => s + (Number(e.cashTips) || 0) + (Number(e.cardTips) || 0), 0);
+    const total = dayEntries.reduce((s, e) => s + (Number(e.amount) || 0), 0);
     weekDays.push({
       date: dateStr,
       label: d.toLocaleDateString('en-US', { weekday: 'short' }),
       total: Math.round(total * 100) / 100,
-      cash: Math.round(dayEntries.reduce((s, e) => s + (Number(e.cashTips) || 0), 0) * 100) / 100,
-      card: Math.round(dayEntries.reduce((s, e) => s + (Number(e.cardTips) || 0), 0) * 100) / 100,
-      hours: Math.round(dayEntries.reduce((s, e) => s + (Number(e.hours) || 0), 0) * 10) / 10,
       count: dayEntries.length,
     });
   }
@@ -197,25 +166,16 @@ export async function getTipBreakdown() {
     wStart.setUTCDate(d.getUTCDate() - d.getUTCDay());
     const key = wStart.toISOString().slice(0, 10);
     if (!weekMap.has(key)) {
-      weekMap.set(key, { start: key, total: 0, cash: 0, card: 0, hours: 0, count: 0 });
+      weekMap.set(key, { start: key, total: 0, count: 0 });
     }
     const w = weekMap.get(key);
-    w.total += (Number(e.cashTips) || 0) + (Number(e.cardTips) || 0);
-    w.cash += Number(e.cashTips) || 0;
-    w.card += Number(e.cardTips) || 0;
-    w.hours += Number(e.hours) || 0;
+    w.total += Number(e.amount) || 0;
     w.count++;
   }
 
   const monthWeeks = [...weekMap.values()]
     .sort((a, b) => a.start.localeCompare(b.start))
-    .map(w => ({
-      ...w,
-      total: Math.round(w.total * 100) / 100,
-      cash: Math.round(w.cash * 100) / 100,
-      card: Math.round(w.card * 100) / 100,
-      hours: Math.round(w.hours * 10) / 10,
-    }));
+    .map(w => ({ ...w, total: Math.round(w.total * 100) / 100 }));
 
   return { week: weekDays, month: monthWeeks };
 }

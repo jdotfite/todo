@@ -142,8 +142,8 @@ test('brand and navigation polish uses favicon, flat yellow, and cleaner sidebar
 
   assert.match(html, /rel="icon" href="\/icon\.svg"/);
   assert.match(html, /rel="apple-touch-icon" href="\/icon\.svg"/);
-  assert.match(html, /styles\.css\?v=hub-pwa-11/);
-  assert.match(html, /app\.js\?v=hub-pwa-11/);
+  assert.match(html, /styles\.css\?v=hub-pwa-12/);
+  assert.match(html, /app\.js\?v=hub-pwa-12/);
   assert.match(html, /<img src="\/house-logo\.svg" alt="" \/>/);
   assert.match(html, /<a href="\/home" data-nav="\/home"><span>🏠<\/span> Home<\/a>/);
   assert.match(html, /<a href="\/inbox" data-nav="\/inbox"><span>↧<\/span> Inbox<\/a>/);
@@ -169,8 +169,8 @@ test('household hub includes documents, capture, sticky navigation, and PWA home
 
   assert.match(html, /<title>Household Hub<\/title>/);
   assert.match(html, /data-nav="\/documents"/);
-  assert.match(html, /styles\.css\?v=hub-pwa-11/);
-  assert.match(html, /app\.js\?v=hub-pwa-11/);
+  assert.match(html, /styles\.css\?v=hub-pwa-12/);
+  assert.match(html, /app\.js\?v=hub-pwa-12/);
   assert.match(js, /function renderDocuments/);
   assert.match(js, /function quickCapture/);
   assert.match(js, /\/api\/documents/);
@@ -189,7 +189,7 @@ test('household hub includes documents, capture, sticky navigation, and PWA home
   assert.equal(manifest.name, 'Household Hub');
   assert.equal(manifest.short_name, 'Hub');
   assert.equal(manifest.start_url, '/home');
-  assert.match(sw, /todo-hub-v11/);
+  assert.match(sw, /todo-hub-v12/);
   assert.match(sw, /'\/home'/);
   assert.match(sw, /'\/calendar'/);
   assert.match(sw, /'\/documents'/);
@@ -206,8 +206,8 @@ test('profile switcher renders module-aware navigation and cache-bumped PWA asse
 
   assert.match(html, /id="profile-switcher"/);
   assert.match(html, /data-module-nav/);
-  assert.match(html, /styles\.css\?v=hub-pwa-11/);
-  assert.match(html, /app\.js\?v=hub-pwa-11/);
+  assert.match(html, /styles\.css\?v=hub-pwa-12/);
+  assert.match(html, /app\.js\?v=hub-pwa-12/);
   assert.match(js, /\/api\/profiles/);
   assert.match(js, /\/api\/profile\/select/);
   assert.match(js, /\/api\/modules/);
@@ -217,10 +217,25 @@ test('profile switcher renders module-aware navigation and cache-bumped PWA asse
   assert.match(js, /data-nav="\$\{escapeAttribute\(module\.href\)\}"/);
   assert.match(css, /\.profile-switcher/);
   assert.match(css, /\.profile-pill/);
-  assert.match(sw, /todo-hub-v11/);
+  assert.match(sw, /todo-hub-v12/);
   assert.match(sw, /'\/tips'/);
   assert.match(js, /chat-thread-preview/);
   assert.match(js, /chat-unread-badge/);
   assert.match(js, /\/api\/chat\/threads\/\$\{encodeURIComponent\(threadId\)\}\/read/);
   assert.match(css, /\.chat-thread-item\.unread/);
+});
+
+test('settings page can hide calendar sources from the household calendar views', () => {
+  const js = readFileSync('public/app.js', 'utf8');
+  const css = readFileSync('public/styles.css', 'utf8');
+  const sw = readFileSync('public/service-worker.js', 'utf8');
+
+  assert.match(js, /function renderSettings/);
+  assert.match(js, /calendar-source-toggle/);
+  assert.match(js, /hiddenCalendarSourceIds/);
+  assert.match(js, /filterVisibleCalendarEvents/);
+  assert.match(js, /sourceLabel/);
+  assert.match(css, /\.settings-card/);
+  assert.match(css, /\.calendar-source-chip/);
+  assert.match(sw, /'\/settings'/);
 });

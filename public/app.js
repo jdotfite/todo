@@ -17,6 +17,7 @@ function routeView() {
   if (path === '/documents') return { key: 'documents', title: 'Documents', documents: true };
   if (path === '/tips') return { key: 'tips', title: 'Tips', tips: true };
   if (path === '/chat') return { key: 'chat', title: 'Chat', chat: true };
+  if (path === '/settings') return { key: 'settings', title: 'Settings', settings: true };
   if (path === '/done') return { key: 'done', title: 'Done', subtitle: 'Completed tasks.', query: 'view=done' };
   if (path === '/projects') return { key: 'projects', title: 'Projects', projects: true };
   return { key: 'inbox', title: 'Inbox', subtitle: 'Unsorted tasks waiting to be clarified or scheduled.', query: 'view=inbox', filters: true };
@@ -43,6 +44,7 @@ async function render() {
   if (view.documents) return renderDocuments();
   if (view.tips) return renderTips();
   if (view.chat) return renderChat();
+  if (view.settings) return renderSettings();
   if (view.projects) return renderProjects();
   if (view.grocery) return renderGrocery();
 
@@ -366,16 +368,39 @@ function bindTouchReorder() {
   });
 }
 
+const CALENDAR_VISIBILITY_KEY = 'householdHub.hiddenCalendarSourceIds';
+
+function hiddenCalendarSourceIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(CALENDAR_VISIBILITY_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+
+function saveHiddenCalendarSourceIds(ids) {
+  localStorage.setItem(CALENDAR_VISIBILITY_KEY, JSON.stringify([...ids]));
+}
+
+function filterVisibleCalendarEvents(events) {
+  const hidden = hiddenCalendarSourceIds();
+  return events.filter(event => !hidden.has(event.sourceId));
+}
+
+function calendarSourceChip(source) {
+  const hidden = hiddenCalendarSourceIds();
+  const checked = !hidden.has(source.id);
+  return `<label class="calendar-source-chip"><input type="checkbox" class="calendar-source-toggle" data-source-id="${escapeAttribute(source.id)}" ${checked ? 'checked' : ''}><span style="--source-color:${escapeAttribute(source.color || '#f6c944')}"></span><strong>${escapeHtml(source.label)}</strong></label>`;
+}
+
 async function renderHome() {
   setActiveNav();
   setBodyView('home');
-  const [{ tasks: allOpenTasks }, { events }, { items: groceryItems }, { documents }, recentChatData] = await Promise.all([
+  const [{ tasks: allOpenTasks }, calendarData, { items: groceryItems }, { documents }, recentChatData] = await Promise.all([
     api('/api/tasks?status=open'),
     api('/api/calendar'),
     api('/api/grocery'),
     api('/api/documents'),
     api('/api/chat/recent?limit=4').catch(() => ({ messages: [] })),
   ]);
+  const events = filterVisibleCalendarEvents(calendarData.events || []);
   const recentChat = recentChatData.messages || [];
   const today = todayString();
   const todayTasks = allOpenTasks.filter(t => !t.dueDate || t.dueDate <= today).slice(0, 5);
@@ -414,24 +439,55 @@ async function quickCapture() {
 async function renderCalendar() {
   setActiveNav();
   setBodyView('calendar');
-  const { events } = await api('/api/calendar');
+  const calendarData = await api('/api/calendar');
+  const calendars = calendarData.calendars || [];
+  const events = filterVisibleCalendarEvents(calendarData.events || []);
   const grouped = events.reduce((acc, event) => {
     (acc[event.date] ||= []).push(event);
     return acc;
   }, {});
   content.innerHTML = viewHeader('Family Calendar', '14-day read-only view from the Family Google Calendar feed.', false, events.length) + `
     <section class="calendar-shell">
-      <div class="calendar-summary"><strong>${events.length}</strong><span>upcoming family event${events.length === 1 ? '' : 's'}</span><small>Private iCal URL stays server-side.</small></div>
-      <div class="calendar-list">${Object.entries(grouped).length ? Object.entries(grouped).map(([date, dayEvents]) => `<section class="calendar-day"><time datetime="${escapeAttribute(date)}">${escapeHtml(formatDateLabel(date))}</time><div>${dayEvents.map(calendarEventCard).join('')}</div></section>`).join('') : '<div class="empty-state">No Family Calendar events in the current window.</div>'}</div>
+      ${calendars.length ? `<div class="calendar-source-row">${calendars.map(calendarSourceChip).join('')}<a href="/settings">Manage</a></div>` : ''}
+      <div class="calendar-summary"><strong>${events.length}</strong><span>visible upcoming event${events.length === 1 ? '' : 's'}</span><small>Private iCal URLs stay server-side.</small></div>
+      <div class="calendar-list">${Object.entries(grouped).length ? Object.entries(grouped).map(([date, dayEvents]) => `<section class="calendar-day"><time datetime="${escapeAttribute(date)}">${escapeHtml(formatDateLabel(date))}</time><div>${dayEvents.map(calendarEventCard).join('')}</div></section>`).join('') : '<div class="empty-state">No visible calendar events in the current window.</div>'}</div>
     </section>`;
+  bindCalendarSourceToggles();
 }
 
 function calendarEventRow(event) {
-  return `<li><span>📅</span><strong>${escapeHtml(event.summary)}</strong><small>${escapeHtml(formatDateLabel(event.date))} · ${escapeHtml(event.time)}</small></li>`;
+  return `<li><span style="color:${escapeAttribute(event.sourceColor || '#f6c944')}">📅</span><strong>${escapeHtml(event.summary)}</strong><small>${escapeHtml(formatDateLabel(event.date))} · ${escapeHtml(event.time)} · ${escapeHtml(event.sourceLabel || 'Calendar')}</small></li>`;
 }
 
 function calendarEventCard(event) {
-  return `<article class="calendar-event"><span>${escapeHtml(event.time)}</span><strong>${escapeHtml(event.summary)}</strong></article>`;
+  return `<article class="calendar-event" style="--source-color:${escapeAttribute(event.sourceColor || '#f6c944')}"><span>${escapeHtml(event.time)}</span><strong>${escapeHtml(event.summary)}</strong><small>${escapeHtml(event.sourceLabel || 'Calendar')}</small></article>`;
+}
+
+function bindCalendarSourceToggles() {
+  content.querySelectorAll('.calendar-source-toggle').forEach(input => {
+    input.onchange = () => {
+      const hidden = hiddenCalendarSourceIds();
+      if (input.checked) hidden.delete(input.dataset.sourceId);
+      else hidden.add(input.dataset.sourceId);
+      saveHiddenCalendarSourceIds(hidden);
+      render();
+    };
+  });
+}
+
+async function renderSettings() {
+  setActiveNav();
+  setBodyView('settings');
+  const { calendars, events } = await api('/api/calendar');
+  const hidden = hiddenCalendarSourceIds();
+  content.innerHTML = viewHeader('Settings', 'Personalize this device without changing the family source of truth.') + `
+    <section class="settings-card">
+      <header><div><p class="eyebrow">Calendar Sources</p><h3>Show or hide calendars</h3><p>These toggles are saved on this browser only. Private iCal URLs stay on the server.</p></div><a href="/calendar">View calendar →</a></header>
+      <div class="settings-calendar-list">${(calendars || []).length ? calendars.map(source => `<div class="settings-calendar-row">${calendarSourceChip(source)}<small>${(events || []).filter(event => event.sourceId === source.id).length} upcoming</small></div>`).join('') : '<div class="empty-state">No calendar sources configured.</div>'}</div>
+      ${hidden.size ? '<button type="button" id="show-all-calendars">Show all calendars</button>' : ''}
+    </section>`;
+  bindCalendarSourceToggles();
+  $('#show-all-calendars')?.addEventListener('click', () => { saveHiddenCalendarSourceIds(new Set()); renderSettings(); });
 }
 
 async function renderDocuments() {

@@ -10,7 +10,7 @@ test('vercel config routes api and spa pages', () => {
   assert.deepEqual(config.rewrites, [
     { source: '/api/(.*)', destination: '/api/index.js' },
     { source: '/', destination: '/api/index.js' },
-    { source: '/(login|home|inbox|today|future|grocery|calendar|documents|tips|chat|projects|done)', destination: '/api/index.js' },
+    { source: '/(login|home|inbox|today|future|grocery|calendar|documents|tips|chat|settings|projects|done)', destination: '/api/index.js' },
   ]);
   assert.ok(existsSync('api/index.js'));
   assert.equal(typeof appDefault, 'function');
