@@ -142,8 +142,8 @@ test('brand and navigation polish uses favicon, flat yellow, and cleaner sidebar
 
   assert.match(html, /rel="icon" href="\/icon\.svg"/);
   assert.match(html, /rel="apple-touch-icon" href="\/icon\.svg"/);
-  assert.match(html, /styles\.css\?v=hub-pwa-19/);
-  assert.match(html, /app\.js\?v=hub-pwa-19/);
+  assert.match(html, /styles\.css\?v=hub-pwa-20/);
+  assert.match(html, /app\.js\?v=hub-pwa-20/);
   assert.match(html, /<img src="\/house-logo\.svg" alt="" \/>/);
   assert.match(html, /<a href="\/home" data-nav="\/home"><span>🏠<\/span> Home<\/a>/);
   assert.match(html, /<a href="\/inbox" data-nav="\/inbox"><span>↧<\/span> Inbox<\/a>/);
@@ -169,8 +169,8 @@ test('household hub includes documents, capture, sticky navigation, and PWA home
 
   assert.match(html, /<title>Household Hub<\/title>/);
   assert.match(html, /data-nav="\/documents"/);
-  assert.match(html, /styles\.css\?v=hub-pwa-19/);
-  assert.match(html, /app\.js\?v=hub-pwa-19/);
+  assert.match(html, /styles\.css\?v=hub-pwa-20/);
+  assert.match(html, /app\.js\?v=hub-pwa-20/);
   assert.match(js, /function renderDocuments/);
   assert.match(js, /function quickCapture/);
   assert.match(js, /\/api\/documents/);
@@ -189,10 +189,11 @@ test('household hub includes documents, capture, sticky navigation, and PWA home
   assert.equal(manifest.name, 'Household Hub');
   assert.equal(manifest.short_name, 'Hub');
   assert.equal(manifest.start_url, '/home');
-  assert.match(sw, /todo-hub-v19/);
-  assert.match(sw, /'\/home'/);
-  assert.match(sw, /'\/calendar'/);
-  assert.match(sw, /'\/documents'/);
+  assert.match(sw, /todo-hub-v20/);
+  assert.match(sw, /STATIC_ASSETS/);
+  assert.doesNotMatch(sw, /'\/home'/);
+  assert.doesNotMatch(sw, /'\/calendar'/);
+  assert.doesNotMatch(sw, /'\/documents'/);
   assert.match(sw, /'\/house-logo\.svg'/);
   assert.match(icon, /viewBox="0 0 512 512"/);
   assert.match(houseLogo, /viewBox="0 0 1030\.96 375\.23"/);
@@ -206,8 +207,8 @@ test('profile switcher renders module-aware navigation and cache-bumped PWA asse
 
   assert.match(html, /id="profile-switcher"/);
   assert.match(html, /data-module-nav/);
-  assert.match(html, /styles\.css\?v=hub-pwa-19/);
-  assert.match(html, /app\.js\?v=hub-pwa-19/);
+  assert.match(html, /styles\.css\?v=hub-pwa-20/);
+  assert.match(html, /app\.js\?v=hub-pwa-20/);
   assert.match(js, /\/api\/profiles/);
   assert.match(js, /\/api\/profile\/select/);
   assert.match(js, /\/api\/modules/);
@@ -217,8 +218,8 @@ test('profile switcher renders module-aware navigation and cache-bumped PWA asse
   assert.match(js, /data-nav="\$\{escapeAttribute\(module\.href\)\}"/);
   assert.match(css, /\.profile-switcher/);
   assert.match(css, /\.profile-pill/);
-  assert.match(sw, /todo-hub-v19/);
-  assert.match(sw, /'\/tips'/);
+  assert.match(sw, /todo-hub-v20/);
+  assert.doesNotMatch(sw, /'\/tips'/);
   assert.match(js, /chat-thread-preview/);
   assert.match(js, /chat-unread-badge/);
   assert.match(js, /\/api\/chat\/threads\/\$\{encodeURIComponent\(threadId\)\}\/read/);
@@ -237,5 +238,21 @@ test('settings page can hide calendar sources from the household calendar views'
   assert.match(js, /sourceLabel/);
   assert.match(css, /\.settings-card/);
   assert.match(css, /\.calendar-source-chip/);
-  assert.match(sw, /'\/settings'/);
+  assert.doesNotMatch(sw, /'\/settings'/);
+});
+
+test('app navigation stays in the loaded shell and service worker falls back to cached assets', () => {
+  const js = readFileSync('public/app.js', 'utf8');
+  const sw = readFileSync('public/service-worker.js', 'utf8');
+
+  assert.match(js, /const APP_ROUTES = new Set/);
+  assert.match(js, /function bindAppNavigation/);
+  assert.match(js, /event\.preventDefault\(\);\s*\n\s*navigateTo\(url\.pathname \+ url\.search \+ url\.hash\)/);
+  assert.match(js, /window\.addEventListener\('popstate'/);
+  assert.doesNotMatch(js, /if \(e\.key === '1'\) location\.href = '\/home'/);
+  assert.match(sw, /request\.mode === 'navigate'\) return/);
+  assert.match(sw, /cache\.match\(url\.pathname\)/);
+  assert.match(sw, /await fetch\(request\)/);
+  assert.match(sw, /if \(cached\) return cached/);
+  assert.match(sw, /ignoreSearch: true/);
 });

@@ -5,8 +5,11 @@ let draggedId = null;
 let quickReaddDeleteMode = false;
 let activeProfile = null;
 let activeModules = [];
+const APP_ROUTES = new Set(['/home', '/today', '/future', '/grocery', '/calendar', '/documents', '/tips', '/chat', '/settings', '/done', '/projects', '/inbox']);
 
 function todayString() { return new Date().toISOString().slice(0, 10); }
+function appRoutePath(pathname) { return pathname === '/' ? '/home' : pathname; }
+function isAppRoute(pathname) { return APP_ROUTES.has(appRoutePath(pathname)); }
 function routeView() {
   const path = location.pathname;
   if (path === '/' || path === '/home') return { key: 'home', title: 'Home', subtitle: '', home: true };
@@ -1097,8 +1100,42 @@ async function refreshProjectOptions() {
 }
 
 function setActiveNav() {
-  const path = location.pathname === '/' ? '/home' : location.pathname;
+  const path = appRoutePath(location.pathname);
   document.querySelectorAll('nav a').forEach(a => a.classList.toggle('active', a.dataset.nav === path));
+}
+
+async function navigateTo(path, { replace = false } = {}) {
+  const url = new URL(path, location.origin);
+  if (!isAppRoute(url.pathname)) {
+    location.href = url.pathname + url.search + url.hash;
+    return;
+  }
+  const next = url.pathname + url.search + url.hash;
+  if (next !== location.pathname + location.search + location.hash) {
+    history[replace ? 'replaceState' : 'pushState']({}, '', next);
+  }
+  activeFilter = 'all';
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  try {
+    await render();
+  } catch (err) {
+    content.innerHTML = `<pre>${escapeHtml(err.stack || err.message)}</pre>`;
+  }
+}
+
+function bindAppNavigation() {
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if (!link || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (link.target || link.hasAttribute('download')) return;
+    const url = new URL(link.href, location.origin);
+    if (url.origin !== location.origin || !isAppRoute(url.pathname)) return;
+    event.preventDefault();
+    navigateTo(url.pathname + url.search + url.hash);
+  });
+  window.addEventListener('popstate', () => {
+    render().catch(err => content.innerHTML = `<pre>${escapeHtml(err.stack || err.message)}</pre>`);
+  });
 }
 
 function setBodyView(viewKey) {
@@ -1146,12 +1183,13 @@ document.querySelector('.fab-add')?.addEventListener('click', openPrimaryAdd);
 document.addEventListener('keydown', e => {
   if (e.target.matches('input, select, [contenteditable="true"]')) return;
   if (e.key.toLowerCase() === 'n') { e.preventDefault(); $('#new-title').focus(); }
-  if (e.key === '1') location.href = '/home';
-  if (e.key === '2') location.href = '/today';
-  if (e.key === '3') location.href = '/calendar';
-  if (e.key === '4') location.href = '/grocery';
+  if (e.key === '1') { e.preventDefault(); navigateTo('/home'); }
+  if (e.key === '2') { e.preventDefault(); navigateTo('/today'); }
+  if (e.key === '3') { e.preventDefault(); navigateTo('/calendar'); }
+  if (e.key === '4') { e.preventDefault(); navigateTo('/grocery'); }
 });
 
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttribute(s) { return escapeHtml(s).replace(/`/g, '&#96;'); }
+bindAppNavigation();
 render().catch(err => content.innerHTML = `<pre>${escapeHtml(err.stack || err.message)}</pre>`);
