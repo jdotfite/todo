@@ -1226,6 +1226,7 @@ function workEditFormHtml(entry, settings) {
       <button type="button" class="work-edit-cancel-btn tips-export-btn">Cancel</button>
     </div>
   </form>`;
+}
 
 function setupWorkVoiceInput(settings) {
   const btn = $('#work-voice-btn');
