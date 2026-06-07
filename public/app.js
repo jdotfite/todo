@@ -653,6 +653,7 @@ const WORK_PERIODS = [
   ['all', 'All'],
 ];
 let workPeriod = 'month';
+let workViewMode = 'cards';
 const workMoneyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const workCompactMoneyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
@@ -707,15 +708,17 @@ async function renderWork() {
   const pct = n => `${Math.round(Number(n || 0) * 1000) / 10}%`;
   const scopedEntries = workEntriesForPeriod(entries, workPeriod);
   const scopedSummary = summarizeWorkEntries(scopedEntries);
-  const visibleEntries = entries.slice(0, 30);
+  const visibleEntries = entries.slice(0, 50);
   const periodLabel = WORK_PERIODS.find(([value]) => value === workPeriod)?.[1] || 'Month';
   const serviceNames = settings.serviceNames || ['IPL', 'Peel', 'Facial', 'Wax', 'Lash', 'Product', 'Other'];
-  content.innerHTML = viewHeader('Work', `${summary.entryCount.toLocaleString()} work entr${summary.entryCount === 1 ? 'y' : 'ies'} logged. ${periodLabel} summary below.`) + `
+
+  content.innerHTML = viewHeader('Work', `${summary.entryCount.toLocaleString()} entr${summary.entryCount === 1 ? 'y' : 'ies'} · ${periodLabel} summary below.`) + `
     <section class="work-dashboard-tools">
       ${workPeriodControlsHtml()}
       <div class="tips-export-row work-actions-row">
         ${entries.length ? `<a class="tips-export-btn" href="/api/work/export.csv" download="work-export.csv">↓ Export CSV</a>` : ''}
         <button type="button" class="tips-export-btn work-import-toggle-btn" id="work-import-toggle">↑ Import</button>
+        <a class="work-gear-btn" href="/settings" title="Work settings">⚙</a>
       </div>
     </section>
     <div id="work-import-panel-container" class="work-import-container" hidden>${workImportPanelInner(importResponse.batches || [])}</div>
@@ -728,7 +731,9 @@ async function renderWork() {
     <p class="work-history-note">All-time: ${escapeHtml(workMoney(summary.revenue))} revenue · ${escapeHtml(workMoney(summary.payout))} payout · ${escapeHtml(workMoney(summary.tips))} tips.</p>
     ${workChartsHtml(summary, scopedEntries, workPeriod)}
     <section class="hub-panel tips-log-panel work-log-panel">
-      <header><h3>Log work</h3><small>Default commission ${escapeHtml(pct(settings.defaultCommissionRate))}</small></header>
+      <header>
+        <div><h3>Log work</h3><small>Commission ${escapeHtml(pct(settings.defaultCommissionRate))} · <a href="/settings">Change in settings ⚙</a></small></div>
+      </header>
       <form id="work-form" class="tips-form work-form">
         <datalist id="work-service-names">${serviceNames.map(n => `<option value="${escapeAttribute(n)}">`).join('')}</datalist>
         <div class="tips-form-row work-form-grid">
@@ -742,21 +747,23 @@ async function renderWork() {
             <button type="submit" class="tips-submit-btn">Save work</button>
             <button type="button" class="work-voice-btn" id="work-voice-btn" title="Speak: service revenue tip">🎤 Voice</button>
           </div>
-          <details class="work-advanced-fields">
-            <summary>Advanced fields</summary>
-            <div>
-              <label>Rate&nbsp;%<input type="number" name="commissionRatePercent" value="${escapeAttribute(String(Math.round(settings.defaultCommissionRate * 1000) / 10))}" step="0.1" min="0" max="100"></label>
-              <label>Deductions&nbsp;$<input type="number" name="deductions" placeholder="0" step="0.01" min="0"></label>
-              <label class="tips-notes-label">Notes<input type="text" name="notes" placeholder="Optional…"></label>
-            </div>
-          </details>
         </div>
       </form>
     </section>
     <section class="work-recent-section">
-      <header><h3>Recent entries</h3><small>${entries.length.toLocaleString()} total${entries.length > visibleEntries.length ? ` · showing latest ${visibleEntries.length}` : ''}</small></header>
-      <div id="work-list" class="tips-shifts work-shifts">
-        ${visibleEntries.length ? visibleEntries.map(e => workEntryHtml(e, settings)).join('') : '<div class="empty-state">No work entries yet. Log your first entry above.</div>'}
+      <header>
+        <div><h3>Entries</h3><small>${entries.length.toLocaleString()} total${entries.length > visibleEntries.length ? ` · latest ${visibleEntries.length}` : ''}</small></div>
+        <div class="work-view-toggle" role="group" aria-label="View mode">
+          <button type="button" class="work-view-btn ${workViewMode === 'cards' ? 'active' : ''}" data-view-mode="cards">Cards</button>
+          <button type="button" class="work-view-btn ${workViewMode === 'table' ? 'active' : ''}" data-view-mode="table">Table</button>
+        </div>
+      </header>
+      <div id="work-list">
+        ${visibleEntries.length
+          ? workViewMode === 'table'
+            ? workTableHtml(visibleEntries, settings)
+            : `<div class="tips-shifts work-shifts">${visibleEntries.map(e => workEntryHtml(e, settings)).join('')}</div>`
+          : '<div class="empty-state">No work entries yet. Log your first entry above.</div>'}
       </div>
     </section>`;
 
@@ -768,14 +775,19 @@ async function renderWork() {
       clientName: fd.get('clientName') || '',
       serviceName: fd.get('serviceName') || '',
       revenue: parseFloat(fd.get('revenue')) || 0,
-      commissionRate: (parseFloat(fd.get('commissionRatePercent')) || 0) / 100,
-      deductions: parseFloat(fd.get('deductions')) || 0,
       tipAmount: parseFloat(fd.get('tipAmount')) || 0,
       tipType: fd.get('tipType') || '',
-      notes: fd.get('notes') || '',
     };
-    await api('/api/work', { method: 'POST', body: JSON.stringify(data) });
-    renderWork();
+    const btn = e.currentTarget.querySelector('[type=submit]');
+    btn.disabled = true;
+    try {
+      await api('/api/work', { method: 'POST', body: JSON.stringify(data) });
+      e.currentTarget.reset();
+      e.currentTarget.querySelector('[name=date]').value = today;
+      renderWork();
+    } finally {
+      btn.disabled = false;
+    }
   };
 
   $('#work-import-toggle').onclick = () => {
@@ -785,6 +797,13 @@ async function renderWork() {
       $('#work-import-toggle').textContent = panel.hidden ? '↑ Import' : '✕ Import';
     }
   };
+
+  content.querySelectorAll('.work-view-btn').forEach(btn => {
+    btn.onclick = () => {
+      workViewMode = btn.dataset.viewMode;
+      renderWork();
+    };
+  });
 
   bindWorkControls(visibleEntries, settings);
   bindWorkImportControls();
@@ -885,40 +904,37 @@ function bindWorkImportReviewControls() {
 }
 
 function workChartsHtml(summary, scopedEntries, period) {
-  const topServices = (summary.topServices || []).slice(0, 5);
-  if (!topServices.length && !scopedEntries.length) return '';
-
-  const barChart = buildWorkEarningsBarChart(scopedEntries, period);
-
-  const serviceRows = topServices.map(service => {
-    const pct = summary.totalEarnings > 0 ? Math.round((service.revenue / summary.revenue) * 100) : 0;
-    return `<tr>
-      <td>${escapeHtml(service.serviceName)}</td>
-      <td class="tip-num">${escapeHtml(workMoney(service.revenue))}</td>
-      <td class="tip-num tip-muted">${Number(service.count || 0)}×</td>
-      <td class="work-svc-bar-cell"><div class="work-svc-bar" style="width:${pct}%"></div></td>
-    </tr>`;
-  }).join('');
-
-  return `<div class="tips-breakdown work-breakdown">
-    ${barChart}
-    ${serviceRows ? `<section class="tips-breakdown-section work-service-breakdown"><h4>Top services</h4><table class="tips-breakdown-table work-services-table"><tbody>${serviceRows}</tbody></table></section>` : ''}
+  const hasData = scopedEntries.length > 0 || (summary.topServices || []).length > 0;
+  if (!hasData) return '';
+  const periodLabel = WORK_PERIODS.find(([v]) => v === period)?.[1] || 'Period';
+  const buckets = buildWorkBuckets(scopedEntries, period);
+  const areaChart = buildWorkAreaChart(buckets, periodLabel);
+  const donutChart = buildServiceDonutChart(summary.topServices || []);
+  const tipsChart = buildTipsTypeChart(summary.tipsByType || {});
+  const payBreakdown = buildPayBreakdownChart(scopedEntries);
+  const hasSecondRow = donutChart || tipsChart;
+  return `<div class="work-charts-grid">
+    ${areaChart ? `<div class="work-chart-card work-chart-full">${areaChart}</div>` : ''}
+    ${hasSecondRow ? `<div class="work-charts-row">
+      ${donutChart ? `<div class="work-chart-card work-chart-donut">${donutChart}</div>` : ''}
+      ${tipsChart ? `<div class="work-chart-card work-chart-tips">${tipsChart}</div>` : ''}
+      ${payBreakdown ? `<div class="work-chart-card work-chart-pay">${payBreakdown}</div>` : ''}
+    </div>` : ''}
   </div>`;
 }
 
-function buildWorkEarningsBarChart(entries, period) {
-  if (!entries.length) return '';
+function buildWorkBuckets(entries, period) {
   const now = new Date();
-
   let buckets = [];
   if (period === 'today') {
     const todayStr = now.toISOString().slice(0, 10);
-    const todayEntries = entries.filter(e => e.date === todayStr);
-    if (!todayEntries.length) return '';
-    for (let h = 8; h <= 20; h++) {
-      buckets.push({ label: `${h > 12 ? h - 12 : h}${h >= 12 ? 'pm' : 'am'}`, value: 0 });
+    for (let h = 7; h <= 20; h++) {
+      const label = `${h > 12 ? h - 12 : h}${h >= 12 ? 'p' : 'a'}`;
+      const value = entries.filter(e => e.date === todayStr).reduce((s, e) => s + Number(e.totalEarnings || 0), 0) / 13;
+      buckets.push({ label, value: h === now.getHours() ? value * 13 : 0 });
     }
-    return '';
+    const todayTotal = entries.filter(e => e.date === todayStr).reduce((s, e) => s + Number(e.totalEarnings || 0), 0);
+    buckets = [{ label: 'Today', value: todayTotal }];
   } else if (period === 'week') {
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
@@ -927,21 +943,21 @@ function buildWorkEarningsBarChart(entries, period) {
       const d = new Date(weekStart);
       d.setDate(weekStart.getDate() + i);
       const dateStr = d.toISOString().slice(0, 10);
-      const dayEntries = entries.filter(e => e.date === dateStr);
-      const total = dayEntries.reduce((s, e) => s + Number(e.totalEarnings || 0), 0);
-      buckets.push({ label: d.toLocaleDateString('en-US', { weekday: 'short' }), value: total });
+      const value = entries.filter(e => e.date === dateStr).reduce((s, e) => s + Number(e.totalEarnings || 0), 0);
+      buckets.push({ label: d.toLocaleDateString('en-US', { weekday: 'short' }), value, date: dateStr });
     }
   } else if (period === 'month') {
     const monthStr = now.toISOString().slice(0, 7);
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const weekBuckets = new Map();
     for (let day = 1; day <= daysInMonth; day++) {
-      const d = new Date(now.getFullYear(), now.getMonth(), day);
       const weekNum = Math.ceil(day / 7);
-      if (!weekBuckets.has(weekNum)) weekBuckets.set(weekNum, { label: `Wk ${weekNum}`, value: 0 });
+      if (!weekBuckets.has(weekNum)) weekBuckets.set(weekNum, { label: `Wk ${weekNum}`, value: 0, count: 0 });
       const dateStr = `${monthStr}-${String(day).padStart(2, '0')}`;
       entries.filter(e => e.date === dateStr).forEach(e => {
-        weekBuckets.get(weekNum).value += Number(e.totalEarnings || 0);
+        const b = weekBuckets.get(weekNum);
+        b.value += Number(e.totalEarnings || 0);
+        b.count += 1;
       });
     }
     buckets = [...weekBuckets.values()];
@@ -950,41 +966,126 @@ function buildWorkEarningsBarChart(entries, period) {
     for (let m = 11; m >= 0; m--) {
       const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
       const key = d.toISOString().slice(0, 7);
-      monthMap.set(key, { label: d.toLocaleDateString('en-US', { month: 'short' }), value: 0 });
+      monthMap.set(key, { label: d.toLocaleDateString('en-US', { month: 'short' }), value: 0, count: 0 });
     }
     entries.forEach(e => {
       const key = e.date.slice(0, 7);
-      if (monthMap.has(key)) monthMap.get(key).value += Number(e.totalEarnings || 0);
+      if (monthMap.has(key)) { monthMap.get(key).value += Number(e.totalEarnings || 0); monthMap.get(key).count += 1; }
     });
     buckets = [...monthMap.values()];
   }
+  return buckets;
+}
 
+function buildWorkAreaChart(buckets, periodLabel) {
   if (!buckets.some(b => b.value > 0)) return '';
-
+  const W = 340, H = 110, padL = 44, padB = 24, padT = 22, padR = 12;
+  const cW = W - padL - padR, cH = H - padT - padB;
+  const n = buckets.length;
   const maxVal = Math.max(...buckets.map(b => b.value), 1);
-  const barW = Math.max(8, Math.floor(280 / buckets.length) - 4);
-  const chartW = buckets.length * (barW + 4);
-  const chartH = 72;
-  const bars = buckets.map((b, i) => {
-    const barH = Math.max(2, Math.round((b.value / maxVal) * chartH));
-    const x = i * (barW + 4);
-    const y = chartH - barH;
-    const active = b.value > 0 ? '' : ' work-bar-empty';
-    return `<g class="work-bar-group${active}">
-      <rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" class="work-bar-fill"/>
-      <text x="${x + barW / 2}" y="${chartH + 12}" text-anchor="middle" class="work-bar-label">${escapeHtml(b.label)}</text>
-      ${b.value > 0 ? `<text x="${x + barW / 2}" y="${y - 4}" text-anchor="middle" class="work-bar-value">${escapeHtml(workMoney(b.value, true))}</text>` : ''}
-    </g>`;
+  const xPos = i => padL + (n < 2 ? cW / 2 : (i / (n - 1)) * cW);
+  const yPos = v => padT + cH - (v / maxVal) * cH;
+  const pts = buckets.map((b, i) => `${xPos(i).toFixed(1)},${yPos(b.value).toFixed(1)}`).join(' ');
+  const areaD = `M${padL},${padT + cH} ${buckets.map((b, i) => `L${xPos(i).toFixed(1)},${yPos(b.value).toFixed(1)}`).join(' ')} L${padL + cW},${padT + cH} Z`;
+  const gridLines = [0, 0.5, 1].map(f => {
+    const y = yPos(maxVal * f).toFixed(1);
+    return `<line x1="${padL}" y1="${y}" x2="${padL + cW}" y2="${y}" class="wc-grid"/>
+      <text x="${padL - 4}" y="${(Number(y) + 4).toFixed(1)}" text-anchor="end" class="wc-axis">${workMoney(maxVal * f, true)}</text>`;
   }).join('');
+  const step = n > 9 ? 2 : 1;
+  const xLabels = buckets.map((b, i) => i % step === 0
+    ? `<text x="${xPos(i).toFixed(1)}" y="${H - 4}" text-anchor="middle" class="wc-axis">${escapeHtml(b.label)}</text>` : '').join('');
+  const dots = buckets.map((b, i) => b.value > 0
+    ? `<circle cx="${xPos(i).toFixed(1)}" cy="${yPos(b.value).toFixed(1)}" r="3.5" class="wc-dot"/>` : '').join('');
+  return `<div class="work-chart-header"><span class="work-chart-title">Earnings trend</span><span class="work-chart-sub">${escapeHtml(periodLabel)}</span></div>
+  <div class="work-chart-scroll">
+    <svg viewBox="0 0 ${W} ${H}" class="work-area-svg" aria-label="Earnings trend">
+      <defs><linearGradient id="wag" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffd60a" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#ffd60a" stop-opacity="0.03"/>
+      </linearGradient></defs>
+      ${gridLines}
+      <path d="${areaD}" fill="url(#wag)"/>
+      <polyline points="${pts}" fill="none" stroke="#ffd60a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${xLabels}${dots}
+    </svg>
+  </div>`;
+}
 
-  return `<section class="tips-breakdown-section work-chart-section">
-    <h4>Earnings · ${escapeHtml(WORK_PERIODS.find(([v]) => v === period)?.[1] || 'Period')}</h4>
-    <div class="work-chart-scroll">
-      <svg class="work-earnings-chart" viewBox="0 0 ${chartW} ${chartH + 20}" width="${chartW}" height="${chartH + 20}" aria-label="Earnings bar chart">
-        ${bars}
-      </svg>
+function buildServiceDonutChart(topServices) {
+  const services = topServices.slice(0, 6);
+  if (!services.length) return '';
+  const colors = ['#ffd60a', '#4ade80', '#60a5fa', '#f472b6', '#fb923c', '#a78bfa'];
+  const cx = 62, cy = 62, r = 50, ir = 32;
+  const total = services.reduce((s, sv) => s + Number(sv.revenue || 0), 0) || 1;
+  let angle = -Math.PI / 2;
+  const slices = services.map((svc, i) => {
+    const frac = Number(svc.revenue || 0) / total;
+    const sweep = frac * 2 * Math.PI;
+    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+    angle += sweep;
+    const x2 = cx + r * Math.cos(angle), y2 = cy + r * Math.sin(angle);
+    const ix1 = cx + ir * Math.cos(angle - sweep), iy1 = cy + ir * Math.sin(angle - sweep);
+    const ix2 = cx + ir * Math.cos(angle), iy2 = cy + ir * Math.sin(angle);
+    const la = sweep > Math.PI ? 1 : 0;
+    const d = `M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${la},1 ${x2.toFixed(2)},${y2.toFixed(2)} L${ix2.toFixed(2)},${iy2.toFixed(2)} A${ir},${ir} 0 ${la},0 ${ix1.toFixed(2)},${iy1.toFixed(2)} Z`;
+    return { d, color: colors[i % colors.length], svc, pct: Math.round(frac * 100) };
+  });
+  const legend = slices.map(({ svc, color, pct }) =>
+    `<div class="wc-legend-row"><span class="wc-legend-dot" style="background:${color}"></span><span class="wc-legend-name">${escapeHtml(svc.serviceName)}</span><span class="wc-legend-pct">${pct}%</span></div>`
+  ).join('');
+  return `<div class="work-chart-header"><span class="work-chart-title">Service mix</span></div>
+  <div class="wc-donut-wrap">
+    <svg viewBox="0 0 124 124" class="wc-donut-svg" aria-label="Service revenue mix">
+      ${slices.map(s => `<path d="${s.d}" fill="${s.color}" class="wc-donut-slice"/>`).join('')}
+      <circle cx="${cx}" cy="${cy}" r="${ir - 2}" class="wc-donut-hole"/>
+      <text x="${cx}" y="${cy - 3}" text-anchor="middle" class="wc-donut-total">${escapeHtml(workMoney(total, true))}</text>
+      <text x="${cx}" y="${cy + 13}" text-anchor="middle" class="wc-donut-sub">revenue</text>
+    </svg>
+    <div class="wc-legend">${legend}</div>
+  </div>`;
+}
+
+function buildTipsTypeChart(tipsByType) {
+  const rows = Object.entries(tipsByType).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (!rows.length) return '';
+  const total = rows.reduce((s, [, v]) => s + v, 0) || 1;
+  const colors = ['#ffd60a', '#4ade80', '#60a5fa', '#f472b6', '#fb923c'];
+  const bars = rows.map(([type, amt], i) => {
+    const pct = Math.round((amt / total) * 100);
+    return `<div class="wc-hbar-row">
+      <span class="wc-hbar-label">${escapeHtml(type)}</span>
+      <div class="wc-hbar-track"><div class="wc-hbar-fill" style="width:${pct}%;background:${colors[i % colors.length]}"></div></div>
+      <span class="wc-hbar-val">${escapeHtml(workMoney(amt, true))}</span>
+    </div>`;
+  }).join('');
+  return `<div class="work-chart-header"><span class="work-chart-title">Tips by type</span></div>
+  <div class="wc-hbars">${bars}</div>`;
+}
+
+function buildPayBreakdownChart(entries) {
+  if (!entries.length) return '';
+  const totalPayout = entries.reduce((s, e) => s + Number(e.payout || 0), 0);
+  const totalTips = entries.reduce((s, e) => s + Number(e.tipAmount || 0), 0);
+  const totalEarnings = totalPayout + totalTips;
+  if (!totalEarnings) return '';
+  const payoutPct = Math.round((totalPayout / totalEarnings) * 100);
+  const tipsPct = 100 - payoutPct;
+  const avgPerEntry = totalEarnings / entries.length;
+  return `<div class="work-chart-header"><span class="work-chart-title">Pay breakdown</span></div>
+  <div class="wc-pay-breakdown">
+    <div class="wc-pay-bar-wrap">
+      <div class="wc-pay-bar-track">
+        <div class="wc-pay-bar-payout" style="width:${payoutPct}%" title="Commission ${payoutPct}%"></div>
+        <div class="wc-pay-bar-tips" style="width:${tipsPct}%" title="Tips ${tipsPct}%"></div>
+      </div>
     </div>
-  </section>`;
+    <div class="wc-pay-legend">
+      <span><span class="wc-pay-dot wc-pay-dot-payout"></span>Commission <b>${payoutPct}%</b></span>
+      <span><span class="wc-pay-dot wc-pay-dot-tips"></span>Tips <b>${tipsPct}%</b></span>
+    </div>
+    <div class="wc-pay-avg">Avg ${escapeHtml(workMoney(avgPerEntry))} / entry</div>
+  </div>`;
 }
 
 function bindWorkControls(entries, settings) {
@@ -1101,6 +1202,41 @@ function parseVoiceWorkEntry(transcript, settings) {
   if (tipMatch) form.tipAmount.value = tipMatch[1];
   const clientMatch = transcript.match(/(?:client|customer)\s+(?:named?\s+)?([a-z]+)/i);
   if (clientMatch) form.clientName.value = clientMatch[1].charAt(0).toUpperCase() + clientMatch[1].slice(1);
+}
+
+function workTableHtml(entries, settings) {
+  if (!entries.length) return `<p class="empty-state" style="margin-top:1rem">No entries to display.</p>`;
+  const rows = entries.map(entry => {
+    const rate = Math.round(Number(entry.commissionRate || 0) * 1000) / 10;
+    const dateLabel = escapeHtml(entry.date ? new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—');
+    return `<tr data-id="${escapeAttribute(entry.id)}" class="wt-row">
+      <td class="wt-date">${dateLabel}</td>
+      <td class="wt-svc">${escapeHtml(entry.serviceName || '—')}</td>
+      <td class="wt-client">${escapeHtml(entry.clientName || '—')}</td>
+      <td class="wt-num">${escapeHtml(workMoney(entry.revenue))}</td>
+      <td class="wt-num">${rate}%</td>
+      <td class="wt-num">${escapeHtml(workMoney(entry.payout))}</td>
+      <td class="wt-num wt-tip">${escapeHtml(entry.tipAmount > 0 ? workMoney(entry.tipAmount) : '—')}</td>
+      <td class="wt-num wt-total"><b>${escapeHtml(workMoney(entry.totalEarnings))}</b></td>
+      <td class="wt-actions">
+        <button class="work-edit-btn icon-btn" data-id="${escapeAttribute(entry.id)}" title="Edit" aria-label="Edit entry">✏️</button>
+        <button class="work-delete-btn icon-btn" data-id="${escapeAttribute(entry.id)}" title="Delete" aria-label="Delete entry">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+  return `<div class="work-table-wrap">
+    <table class="work-table">
+      <thead>
+        <tr>
+          <th>Date</th><th>Service</th><th>Client</th>
+          <th class="wt-num">Revenue</th><th class="wt-num">Rate</th>
+          <th class="wt-num">Payout</th><th class="wt-num">Tip</th>
+          <th class="wt-num">Total</th><th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
 }
 
 function workEntryHtml(entry, settings) {

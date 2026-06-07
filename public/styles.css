@@ -2279,6 +2279,153 @@ body[data-view="documents"] .fab-add::after { content: 'Add task'; }
   line-height: 1.2;
   box-sizing: border-box;
 }
+
+/* ── Work Charts Grid ─────────────────────────────────────── */
+.work-charts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+.work-chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 14px 10px;
+  overflow: hidden;
+}
+.work-chart-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.work-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.work-chart-sub {
+  font-size: 11px;
+  color: var(--muted, #888);
+}
+.work-charts-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.work-chart-donut,
+.work-chart-tips,
+.work-chart-pay {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+/* Area chart */
+.work-chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.work-area-svg { display: block; max-width: 100%; }
+.wc-grid { stroke: var(--border); stroke-width: 0.7; }
+.wc-axis { font-size: 9px; fill: var(--muted, #888); }
+.wc-dot { fill: #ffd60a; stroke: #1a1a1a; stroke-width: 1.5; }
+
+/* Donut chart */
+.wc-donut-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.wc-donut-svg {
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+  display: block;
+}
+.wc-donut-slice { stroke: var(--surface); stroke-width: 1.5; transition: opacity 0.15s; }
+.wc-donut-slice:hover { opacity: 0.85; }
+.wc-donut-hole { fill: var(--surface); }
+.wc-donut-total { font-size: 12px; font-weight: 700; fill: var(--text); }
+.wc-donut-sub { font-size: 9px; fill: var(--muted, #888); }
+.wc-legend { flex: 1; display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+.wc-legend-row { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.wc-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.wc-legend-name { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wc-legend-pct { color: var(--muted, #888); flex-shrink: 0; }
+
+/* Tips type horizontal bars */
+.wc-hbars { display: flex; flex-direction: column; gap: 6px; }
+.wc-hbar-row { display: flex; align-items: center; gap: 7px; }
+.wc-hbar-label { font-size: 11px; width: 48px; flex-shrink: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wc-hbar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.wc-hbar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.wc-hbar-val { font-size: 10px; color: var(--muted, #888); width: 40px; text-align: right; flex-shrink: 0; }
+
+/* Pay breakdown chart */
+.wc-pay-breakdown { display: flex; flex-direction: column; gap: 8px; }
+.wc-pay-bar-wrap { width: 100%; }
+.wc-pay-bar-track { display: flex; height: 10px; border-radius: 5px; overflow: hidden; }
+.wc-pay-bar-payout { background: #ffd60a; }
+.wc-pay-bar-tips { background: #4ade80; }
+.wc-pay-legend { display: flex; gap: 12px; font-size: 11px; }
+.wc-pay-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.wc-pay-dot-payout { background: #ffd60a; }
+.wc-pay-dot-tips { background: #4ade80; }
+.wc-pay-avg { font-size: 11px; color: var(--muted, #888); }
+
+/* ── Work Table View ──────────────────────────────────────── */
+.work-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.work-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 580px;
+}
+.work-table thead tr {
+  background: #1a1a1a;
+}
+.work-table th {
+  padding: 9px 10px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+.work-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text);
+  white-space: nowrap;
+}
+.wt-row:last-child td { border-bottom: none; }
+.wt-row:hover td { background: rgba(255,255,255,0.03); }
+.wt-num { text-align: right; }
+.wt-tip { color: #4ade80; }
+.wt-total { font-size: 14px; }
+.wt-date { color: var(--muted, #888); font-size: 12px; }
+.wt-svc { font-weight: 500; }
+.wt-actions { text-align: right; }
+.wt-actions .icon-btn { padding: 2px 4px; font-size: 13px; }
+
+/* View toggle (Cards / Table) */
+.work-view-toggle { display: flex; gap: 4px; }
+.work-view-toggle .btn-sm.active {
+  background: var(--accent, #ffd60a);
+  color: #000;
+  border-color: var(--accent, #ffd60a);
+}
+
+@media (max-width: 480px) {
+  .work-charts-row { flex-direction: column; }
+  .work-chart-donut, .work-chart-tips, .work-chart-pay { flex: 1 1 auto; }
+}
 .work-form-grid select {
   appearance: auto;
 }
