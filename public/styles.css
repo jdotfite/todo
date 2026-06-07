@@ -184,7 +184,7 @@ pre { white-space: pre-wrap; background: white; padding: 16px; border-radius: 12
 }
 @media (max-width: 720px) {
   body { background: #fff; }
-  main { padding: 0 18px 90px; margin-bottom: 0; }
+  main { padding: 0 16px 90px; margin-bottom: 0; }
   .composer { grid-template-columns: 1fr; padding: 12px; border-radius: 21px; margin-bottom: 16px; }
   #add { grid-column: auto; }
   .summary-grid { gap: 10px; }
@@ -203,7 +203,7 @@ pre { white-space: pre-wrap; background: white; padding: 16px; border-radius: 12
   .fab-add { display: grid; place-items: center; }
 }
 @media (max-width: 430px) {
-  main { padding-inline: 14px; }
+  main { padding-inline: 16px; }
   .summary-card span:not(.summary-icon) { font-size: 15px; }
   .summary-card .summary-icon { width: 30px; height: 30px; }
   .task-actions { gap: 5px; }
