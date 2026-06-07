@@ -722,7 +722,7 @@ async function renderWork() {
       <div class="tips-export-row work-actions-row">
         ${entries.length ? `<a class="tips-export-btn" href="/api/work/export.csv" download="work-export.csv">↓ Export CSV</a>` : ''}
         <button type="button" class="tips-export-btn work-import-toggle-btn" id="work-import-toggle">↑ Import</button>
-        <a class="work-gear-btn" href="/settings" title="Work settings">⚙</a>
+        <a class="work-gear-btn wt-icon-btn" href="/settings" title="Work settings" aria-label="Work settings"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v1M8 13.5v1M1.5 8h1M13.5 8h1M3.4 3.4l.7.7M11.9 11.9l.7.7M11.9 3.4l-.7.7M4.1 11.9l-.7.7"/></svg></a>
       </div>
     </section>
     <div id="work-import-panel-container" class="work-import-container" hidden>${workImportPanelInner(importResponse.batches || [])}</div>

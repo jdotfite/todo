@@ -2431,6 +2431,8 @@ body[data-view="documents"] .fab-add::after { content: 'Add task'; }
 .wt-icon-btn svg { width: 14px; height: 14px; display: block; }
 .wt-icon-btn.wt-edit:hover { background: rgba(255,255,255,0.06); color: #ffd60a; border-color: var(--border); }
 .wt-icon-btn.wt-delete:hover { background: rgba(239,68,68,0.08); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+.work-gear-btn.wt-icon-btn { text-decoration: none; }
+.work-gear-btn.wt-icon-btn:hover { background: rgba(255,255,255,0.06); color: #ffd60a; border-color: var(--border); }
 
 /* Client search */
 .work-search-row { margin: 6px 0 10px; }
