@@ -710,8 +710,8 @@ async function renderWork() {
   const scopedEntries = workEntriesForPeriod(entries, workPeriod);
   const scopedSummary = summarizeWorkEntries(scopedEntries);
   const filteredEntries = workClientSearch
-    ? entries.filter(e => (e.clientName || '').toLowerCase().includes(workClientSearch.toLowerCase()))
-    : entries;
+    ? scopedEntries.filter(e => (e.clientName || '').toLowerCase().includes(workClientSearch.toLowerCase()))
+    : scopedEntries;
   const visibleEntries = filteredEntries.slice(0, 50);
   const periodLabel = WORK_PERIODS.find(([value]) => value === workPeriod)?.[1] || 'Month';
   const serviceNames = settings.serviceNames || ['IPL', 'Peel', 'Facial', 'Wax', 'Lash', 'Product', 'Other'];
@@ -737,6 +737,7 @@ async function renderWork() {
     <section class="hub-panel tips-log-panel work-log-panel">
       <header>
         <div><h3>Log work</h3><small>Commission ${escapeHtml(pct(settings.defaultCommissionRate))} · <a href="/settings">Change in settings ⚙</a></small></div>
+        <button type="button" class="work-voice-btn" id="work-voice-btn" title="Speak to fill form">🎤 Voice</button>
       </header>
       <form id="work-form" class="tips-form work-form">
         <datalist id="work-service-names">${serviceNames.map(n => `<option value="${escapeAttribute(n)}">`).join('')}</datalist>
@@ -749,14 +750,13 @@ async function renderWork() {
           <label>Tip type<select name="tipType"><option value=""></option>${(settings.tipTypes || ['Cash', 'Tippy', 'Venmo', 'Other']).map(type => `<option value="${escapeAttribute(type)}">${escapeHtml(type)}</option>`).join('')}</select></label>
           <div class="work-form-submit-row">
             <button type="submit" class="tips-submit-btn">Save</button>
-            <button type="button" class="work-voice-btn" id="work-voice-btn" title="Speak: service revenue tip">🎤 Voice</button>
           </div>
         </div>
       </form>
     </section>
     <section class="work-recent-section">
       <header>
-        <div><h3>Entries</h3><small>${workClientSearch ? `${visibleEntries.length} match${visibleEntries.length === 1 ? '' : 'es'}` : `${entries.length.toLocaleString()} total`}</small></div>
+        <div><h3>Entries</h3><small>${workClientSearch ? `${visibleEntries.length} match${visibleEntries.length === 1 ? '' : 'es'}` : `${scopedEntries.length.toLocaleString()} · ${periodLabel}`}</small></div>
         <div class="work-view-toggle" role="group" aria-label="View mode">
           <button type="button" class="work-view-btn ${workViewMode === 'cards' ? 'active' : ''}" data-view-mode="cards">Cards</button>
           <button type="button" class="work-view-btn ${workViewMode === 'table' ? 'active' : ''}" data-view-mode="table">Table</button>
@@ -817,18 +817,18 @@ async function renderWork() {
     searchInput.oninput = () => {
       workClientSearch = searchInput.value.trim();
       const filtered = workClientSearch
-        ? entries.filter(e => (e.clientName || '').toLowerCase().includes(workClientSearch.toLowerCase()))
-        : entries;
+        ? scopedEntries.filter(e => (e.clientName || '').toLowerCase().includes(workClientSearch.toLowerCase()))
+        : scopedEntries;
       const visible = filtered.slice(0, 50);
       const listEl = document.getElementById('work-list');
       listEl.innerHTML = visible.length
         ? workViewMode === 'table'
           ? workTableHtml(visible, settings)
           : workCardsGroupedHtml(visible, settings)
-        : `<div class="empty-state">${workClientSearch ? 'No entries match that client name.' : 'No work entries yet.'}</div>`;
+        : `<div class="empty-state">${workClientSearch ? 'No entries match that client name.' : 'No entries for this period.'}</div>`;
       bindWorkControls(visible, settings);
       const small = content.querySelector('.work-recent-section header small');
-      if (small) small.textContent = workClientSearch ? `${visible.length} match${visible.length === 1 ? '' : 'es'}` : `${entries.length.toLocaleString()} total`;
+      if (small) small.textContent = workClientSearch ? `${visible.length} match${visible.length === 1 ? '' : 'es'}` : `${scopedEntries.length.toLocaleString()} · ${periodLabel}`;
     };
   }
 

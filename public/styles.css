@@ -2580,10 +2580,11 @@ body[data-view="documents"] .fab-add::after { content: 'Add task'; }
 .work-import-panel header h3 { margin: 0; font-size: 14px; }
 .work-import-panel header small { color: var(--muted); font-size: 12px; }
 /* Form submit row with voice button */
-.work-form-submit-row { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; grid-column: 1 / -1; }
-.work-voice-btn { background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; color: var(--text); transition: background .15s; white-space: nowrap; }
-.work-voice-btn:hover { background: rgba(255,214,10,.1); border-color: var(--accent); }
+.work-form-submit-row { grid-column: 1 / -1; }
+.work-voice-btn { background: transparent; border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; font-size: 12px; font-weight: 750; cursor: pointer; color: var(--muted); transition: background .15s, border-color .15s, color .15s; white-space: nowrap; flex-shrink: 0; }
+.work-voice-btn:hover { background: rgba(255,214,10,.08); border-color: var(--accent); color: var(--accent); }
 .work-voice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.work-voice-btn.recording { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,.08); }
 /* Earnings bar chart */
 .work-chart-section h4 { margin: 0 0 10px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .work-chart-scroll { overflow-x: auto; padding-bottom: 4px; }
