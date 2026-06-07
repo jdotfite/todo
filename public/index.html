@@ -8,7 +8,7 @@
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icon.svg" />
   <meta name="theme-color" content="#111111" />
-  <link rel="stylesheet" href="/styles.css?v=hub-pwa-40" />
+  <link rel="stylesheet" href="/styles.css?v=hub-pwa-41" />
 </head>
 <body>
   <div class="app-shell">
@@ -78,14 +78,17 @@
 
   <div id="mobile-nav-drawer" class="mobile-nav-drawer" aria-label="Navigation menu">
     <div class="mobile-nav-drawer-header">
-      <span class="mobile-nav-drawer-title">Fite Family Hub</span>
+      <div class="mobile-nav-drawer-brand">
+        <span class="mobile-brand-mark-sm"><img src="/house-logo.svg" class="mobile-brand-logo" alt="" /></span>
+        <span class="mobile-nav-drawer-title">Fite Family Hub</span>
+      </div>
       <button type="button" id="mobile-nav-close" aria-label="Close navigation">✕</button>
     </div>
     <nav id="mobile-nav-drawer-links" aria-label="All views"></nav>
   </div>
   <div id="mobile-nav-backdrop" class="mobile-nav-backdrop"></div>
 
-  <script src="/app.js?v=hub-pwa-40" type="module"></script>
+  <script src="/app.js?v=hub-pwa-41" type="module"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js'));

@@ -1541,55 +1541,8 @@ function showChatDeleteModal(title, msg, onConfirm) {
   m.hidden = false;
 }
 
-async function renderChat() {
-  setActiveNav();
-  setBodyView('chat');
-  const { threads } = await api('/api/chat/threads');
-  content.innerHTML = viewHeader('Family Chat', 'Household message board — everyone can post and read.') + `
-    <div class="chat-layout">
-      <section class="chat-thread-list" id="chat-thread-list">
-        <div class="chat-thread-header">
-          <span>Threads</span>
-          <button type="button" class="chat-new-thread-btn" id="chat-new-thread-btn">+ New</button>
-        </div>
-        <form id="chat-new-thread-form" class="chat-new-thread-form" hidden>
-          <input type="text" id="chat-thread-title" placeholder="Thread title…" maxlength="120" autocomplete="off">
-          <button type="submit">Create</button>
-          <button type="button" id="chat-cancel-thread">Cancel</button>
-        </form>
-        <div id="chat-threads-inner">
-          ${threads.length ? threads.map(chatThreadItemHtml).join('') : '<p class="chat-empty">No threads yet.</p>'}
-        </div>
-      </section>
-      <section class="chat-message-pane" id="chat-message-pane">
-        <div class="chat-message-pane-empty">Select a thread to read messages.</div>
-      </section>
-    </div>`;
-
-  $('#chat-new-thread-btn').onclick = () => {
-    $('#chat-new-thread-form').hidden = false;
-    $('#chat-thread-title').focus();
-    $('#chat-new-thread-btn').hidden = true;
-  };
-  $('#chat-cancel-thread').onclick = () => {
-    $('#chat-new-thread-form').hidden = true;
-    $('#chat-new-thread-btn').hidden = false;
-  };
-  $('#chat-new-thread-form').onsubmit = async e => {
-    e.preventDefault();
-    const title = $('#chat-thread-title').value.trim();
-    if (!title) return;
-    const { thread } = await api('/api/chat/threads', { method: 'POST', body: JSON.stringify({ title }) });
-    await renderChat();
-    openChatThread(thread.id, thread.title);
-  };
-
-  const isMobile = () => window.innerWidth <= 700;
-  if (isMobile() && threads.length) {
-    await openChatThread(threads[0].id, threads[0].title);
-  }
-
-  content.querySelectorAll('.chat-thread-item').forEach(item => {
+function bindChatThreadItems(scope) {
+  scope.querySelectorAll('.chat-thread-item').forEach(item => {
     item.querySelector('.chat-thread-btn').onclick = () => openChatThread(item.dataset.id, item.dataset.title);
     const pinBtn = item.querySelector('.chat-pin-btn');
     if (pinBtn) pinBtn.onclick = async e => {
@@ -1624,6 +1577,44 @@ async function renderChat() {
       });
     };
   });
+}
+
+async function renderChat() {
+  setActiveNav();
+  setBodyView('chat');
+  const { threads } = await api('/api/chat/threads');
+  content.innerHTML = `
+    <div class="chat-layout">
+      <section class="chat-thread-list" id="chat-thread-list">
+        <div class="chat-thread-header"><span>Threads</span></div>
+        <form id="chat-new-thread-form" class="chat-new-thread-form">
+          <input type="text" id="chat-thread-title" placeholder="New thread…" maxlength="120" autocomplete="off">
+          <button type="submit">Create</button>
+        </form>
+        <div id="chat-threads-inner">
+          ${threads.length ? threads.map(chatThreadItemHtml).join('') : '<p class="chat-empty">No threads yet.</p>'}
+        </div>
+      </section>
+      <section class="chat-message-pane" id="chat-message-pane">
+        <div class="chat-message-pane-empty">Select a thread to read messages.</div>
+      </section>
+    </div>`;
+
+  $('#chat-new-thread-form').onsubmit = async e => {
+    e.preventDefault();
+    const title = $('#chat-thread-title').value.trim();
+    if (!title) return;
+    $('#chat-thread-title').value = '';
+    const { thread } = await api('/api/chat/threads', { method: 'POST', body: JSON.stringify({ title }) });
+    await renderChat();
+    openChatThread(thread.id, thread.title);
+  };
+
+  if (window.innerWidth <= 720 && threads.length) {
+    await openChatThread(threads[0].id, threads[0].title);
+  }
+
+  bindChatThreadItems(content);
 }
 
 async function openChatThread(threadId, threadTitle) {
@@ -1662,15 +1653,21 @@ async function openChatThread(threadId, threadTitle) {
   const msgEl = $('#chat-messages');
   if (msgEl) msgEl.scrollTop = msgEl.scrollHeight;
 
-  pane.querySelector('.chat-back-btn')?.addEventListener('click', () => {
+  pane.querySelector('.chat-back-btn')?.addEventListener('click', async () => {
     const layout = pane.closest('.chat-layout');
     if (layout) delete layout.dataset.mobileView;
     content.querySelectorAll('.chat-thread-item').forEach(el => el.classList.remove('active'));
+    const { threads: updated } = await api('/api/chat/threads').catch(() => ({ threads: [] }));
+    const inner = document.getElementById('chat-threads-inner');
+    if (inner) {
+      inner.innerHTML = updated.length ? updated.map(chatThreadItemHtml).join('') : '<p class="chat-empty">No threads yet.</p>';
+      bindChatThreadItems(content);
+    }
   });
 
   const chatTextarea = $('#chat-body');
   const chatSendBtn = document.querySelector('#chat-compose .chat-send-btn');
-  const syncSendBtn = () => chatSendBtn?.classList.toggle('visible', !!(chatTextarea?.value.trim()));
+  const syncSendBtn = () => chatSendBtn?.classList.toggle('active', !!(chatTextarea?.value.trim()));
   chatTextarea?.addEventListener('input', () => {
     syncSendBtn();
     chatTextarea.style.height = 'auto';
@@ -1909,7 +1906,61 @@ async function loadProfileChrome() {
   const pill = document.querySelector('.profile-pill');
   if (pill) pill.textContent = activeProfile?.name || '';
   const mobileProfileBtn = document.getElementById('mobile-profile-btn');
-  if (mobileProfileBtn && activeProfile) mobileProfileBtn.innerHTML = profileAvatarHtml(activeProfile, 30);
+  if (mobileProfileBtn && activeProfile) {
+    mobileProfileBtn.innerHTML = profileAvatarHtml(activeProfile, 30);
+    mobileProfileBtn.onclick = openProfileSettingsSheet;
+  }
+}
+
+function openProfileSettingsSheet() {
+  let sheet = document.getElementById('profile-settings-sheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'profile-settings-sheet';
+    sheet.className = 'profile-settings-sheet';
+    document.body.appendChild(sheet);
+  }
+  sheet.innerHTML = `
+    <div class="pss-backdrop"></div>
+    <div class="pss-panel">
+      <div class="pss-header">
+        <div class="pss-avatar-wrap" id="pss-avatar-wrap">${profileAvatarHtml(activeProfile, 60)}</div>
+        <div class="pss-info">
+          <strong>${escapeHtml(activeProfile?.name || '')}</strong>
+          <small>Active profile</small>
+        </div>
+        <button type="button" class="pss-close" aria-label="Close">✕</button>
+      </div>
+      <div class="pss-body">
+        <label class="pss-upload-btn">
+          Change avatar
+          <input type="file" accept="image/*" id="pss-avatar-file" style="display:none">
+        </label>
+        <button type="button" class="pss-settings-link">Go to settings →</button>
+      </div>
+    </div>`;
+  sheet.classList.add('open');
+  const close = () => sheet.classList.remove('open');
+  sheet.querySelector('.pss-backdrop').onclick = close;
+  sheet.querySelector('.pss-close').onclick = close;
+  sheet.querySelector('.pss-settings-link').onclick = () => { close(); navigateTo('/settings'); };
+  sheet.querySelector('#pss-avatar-file').onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        await api(`/api/profiles/${encodeURIComponent(activeProfile.id)}/avatar`, {
+          method: 'PATCH',
+          body: JSON.stringify({ avatar: ev.target.result }),
+        });
+        await loadProfileChrome();
+        const wrap = document.getElementById('pss-avatar-wrap');
+        if (wrap) wrap.innerHTML = profileAvatarHtml(activeProfile, 60);
+      } catch (err) { alert('Upload failed. ' + (err?.message || '')); }
+    };
+    reader.readAsDataURL(file);
+  };
 }
 
 function moduleLinks(module) {
