@@ -2715,6 +2715,7 @@ body[data-view="documents"] .fab-add::after { content: 'Add task'; }
     height: 32px;
     border-radius: 8px;
     background: #ffd60a;
+    color: #111;
     flex-shrink: 0;
     cursor: pointer;
   }
