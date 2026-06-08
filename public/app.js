@@ -3,6 +3,13 @@ const content = $('#content');
 let activeFilter = 'all';
 let draggedId = null;
 let quickReaddDeleteMode = false;
+document.addEventListener('pointerdown', e => {
+  if (!quickReaddDeleteMode) return;
+  if (!e.target.closest('.recent-grocery')) {
+    quickReaddDeleteMode = false;
+    document.querySelector('.recent-grocery')?.classList.remove('quick-readd-delete-mode');
+  }
+}, true);
 let activeProfile = null;
 let activeModules = [];
 const APP_ROUTES = new Set(['/home', '/today', '/future', '/grocery', '/calendar', '/documents', '/work', '/chat', '/settings', '/profile', '/done', '/projects', '/inbox']);
@@ -1935,6 +1942,7 @@ function bindRecentGrocerySwipeDelete() {
       pill.style.transform = '';
     };
     pill.addEventListener('pointerdown', e => {
+      if (e.target.closest('.recent-grocery-delete')) return;
       startX = e.clientX;
       currentX = 0;
       dragging = true;
