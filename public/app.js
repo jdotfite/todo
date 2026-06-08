@@ -1862,14 +1862,17 @@ async function renderGrocery() {
   const listText = activeItems.map(i => `${i.quantity ? i.quantity + ' ' : ''}${i.title}`).join('\n');
   content.innerHTML = viewHeader('Grocery', 'Fast shared capture for Walmart and household shopping.', false, activeItems.length) + `
     <section class="grocery-panel">
+      <div class="grocery-add-wrap">
       <div class="grocery-add">
-        <input id="grocery-title" placeholder="Add grocery item… e.g. walmart 2 paper towels" autofocus>
+        <input id="grocery-title" placeholder="Add grocery item… e.g. walmart 2 paper towels" autofocus autocomplete="off">
         <div class="grocery-add-btns">
           <button type="button" id="grocery-voice-btn" class="grocery-voice-btn" title="Speak to add items">🎤</button>
           <button type="button" id="grocery-scan-btn" class="grocery-voice-btn" title="Scan barcode or product photo">📷</button>
           <input type="file" id="grocery-scan-input" accept="image/*" capture="environment" style="display:none">
           <button id="grocery-add" aria-label="Add grocery item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         </div>
+      </div>
+      <div id="grocery-suggestions" class="grocery-suggestions" hidden></div>
       </div>
       ${recentItems.length ? recentGroceryHtml(recentItems) : ''}
       <div class="grocery-actions">
@@ -1883,6 +1886,7 @@ async function renderGrocery() {
   $('#grocery-title').addEventListener('keydown', e => { if (e.key === 'Enter') addGroceryFromInput(); });
   setupGroceryVoiceInput();
   setupGroceryScanInput();
+  setupGroceryAutocomplete();
   $('#clear-grocery').onclick = async () => { await api('/api/grocery/clear-checked', { method: 'POST' }); renderGrocery(); };
   $('#copy-grocery').onclick = async () => {
     const text = $('#grocery-copy').value;
@@ -1971,11 +1975,82 @@ function groceryGroupHtml(category, items) {
   </article>`).join('')}</section>`;
 }
 
+let _grocerySuggestion = null;
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+function setupGroceryAutocomplete() {
+  const input = $('#grocery-title');
+  const dropdown = $('#grocery-suggestions');
+  if (!input || !dropdown) return;
+
+  const search = debounce(async q => {
+    if (q.length < 2) { dropdown.hidden = true; return; }
+    try {
+      const { suggestions } = await api(`/api/grocery/suggest?q=${encodeURIComponent(q)}`);
+      if (!suggestions.length) { dropdown.hidden = true; return; }
+      dropdown.innerHTML = suggestions.map((s, i) =>
+        `<div class="grocery-suggestion" data-idx="${i}" role="option">
+          <span class="gs-title">${escapeHtml(s.title)}</span>
+          <span class="gs-cat">${escapeHtml(s.category)}</span>
+        </div>`
+      ).join('');
+      dropdown._suggestions = suggestions;
+      dropdown.hidden = false;
+      dropdown.querySelectorAll('.grocery-suggestion').forEach(el => {
+        el.onmousedown = e => {
+          e.preventDefault();
+          const s = suggestions[Number(el.dataset.idx)];
+          input.value = s.title;
+          _grocerySuggestion = s;
+          dropdown.hidden = true;
+        };
+      });
+    } catch { dropdown.hidden = true; }
+  }, 220);
+
+  input.addEventListener('input', e => {
+    _grocerySuggestion = null;
+    search(e.target.value.trim());
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { dropdown.hidden = true; _grocerySuggestion = null; }
+    if (e.key === 'ArrowDown' && !dropdown.hidden) {
+      const first = dropdown.querySelector('.grocery-suggestion');
+      first?.focus();
+    }
+  });
+  dropdown.addEventListener('keydown', e => {
+    const items = [...dropdown.querySelectorAll('.grocery-suggestion')];
+    const idx = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') items[idx + 1]?.focus();
+    if (e.key === 'ArrowUp') { if (idx === 0) input.focus(); else items[idx - 1]?.focus(); }
+    if (e.key === 'Enter' && idx >= 0) items[idx].onmousedown({ preventDefault: () => {} });
+    if (e.key === 'Escape') { dropdown.hidden = true; input.focus(); }
+  });
+  input.addEventListener('blur', () => setTimeout(() => { dropdown.hidden = true; }, 150));
+}
+
 async function addGroceryFromInput() {
   const input = $('#grocery-title');
   const text = input.value.trim();
   if (!text) return;
-  await api('/api/quick-add', { method: 'POST', body: JSON.stringify({ text: text.match(/^(walmart|grocery)\s+/i) ? text : `grocery ${text}`, source: 'app' }) });
+  const suggestion = _grocerySuggestion;
+  _grocerySuggestion = null;
+  $('#grocery-suggestions').hidden = true;
+  if (suggestion && suggestion.title === text) {
+    await api('/api/grocery', { method: 'POST', body: JSON.stringify({
+      title: suggestion.title,
+      category: suggestion.category,
+      store: suggestion.store || 'walmart',
+      source: 'app',
+    })});
+  } else {
+    await api('/api/quick-add', { method: 'POST', body: JSON.stringify({ text: text.match(/^(walmart|grocery)\s+/i) ? text : `grocery ${text}`, source: 'app' }) });
+  }
   input.value = '';
   renderGrocery();
 }

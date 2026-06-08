@@ -29,6 +29,27 @@ export function registerGroceryRoutes(app) {
     try { res.json(await clearCheckedGroceryItems()); } catch (err) { next(err); }
   });
 
+  app.get('/api/grocery/suggest', async (req, res, next) => {
+    try {
+      const q = String(req.query.q || '').trim().toLowerCase();
+      if (q.length < 2) return res.json({ suggestions: [] });
+      const { readStore } = await import('../../db.js');
+      const store = await readStore();
+      const seen = new Map();
+      for (const item of (store.groceryItems || [])) {
+        if (!item.title?.toLowerCase().includes(q)) continue;
+        const key = item.title.toLowerCase();
+        const existing = seen.get(key);
+        if (!existing || (item.checkedAt || '') > (existing.checkedAt || '')) seen.set(key, item);
+      }
+      const suggestions = [...seen.values()]
+        .sort((a, b) => (b.checkedAt || '').localeCompare(a.checkedAt || ''))
+        .slice(0, 8)
+        .map(i => ({ title: i.title, category: i.category, store: i.store || 'walmart' }));
+      res.json({ suggestions });
+    } catch (err) { next(err); }
+  });
+
   app.post('/api/quick-add', async (req, res, next) => {
     try { res.status(201).json(await quickAdd(req.body.text, req.body)); } catch (err) { next(err); }
   });

@@ -2625,7 +2625,13 @@ body[data-view="documents"] .fab-add::after { content: 'Add task'; }
 .work-voice-btn:hover { background: rgba(255,214,10,.08); border-color: var(--accent); color: var(--accent); }
 .work-voice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .work-voice-btn.recording { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,.08); }
+.grocery-add-wrap { position: relative; }
 .grocery-add-btns { display: flex; gap: 8px; }
+.grocery-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface, #1e1f2a); border: 1px solid var(--border); border-top: none; border-radius: 0 0 12px 12px; z-index: 100; overflow: hidden; }
+.grocery-suggestion { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; cursor: pointer; gap: 8px; outline: none; }
+.grocery-suggestion:hover, .grocery-suggestion:focus { background: rgba(255,214,10,.08); }
+.gs-title { font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gs-cat { font-size: 11px; color: var(--muted); flex-shrink: 0; text-transform: capitalize; }
 .grocery-voice-btn { background: #171821; border: 1px solid var(--border); border-radius: 12px; padding: 10px 13px; font-size: 15px; cursor: pointer; color: var(--muted); transition: background .15s, border-color .15s; flex-shrink: 0; }
 .grocery-voice-btn:hover { background: rgba(255,214,10,.08); border-color: var(--accent); }
 .grocery-voice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
