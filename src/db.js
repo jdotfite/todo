@@ -172,4 +172,8 @@ export function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-await migrate();
+try {
+  await migrate();
+} catch (err) {
+  console.error('[db] migrate failed on startup:', err.message);
+}
