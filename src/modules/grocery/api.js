@@ -30,8 +30,13 @@ export function registerGroceryRoutes(app) {
     try { res.json(await clearCheckedGroceryItems()); } catch (err) { next(err); }
   });
 
-  app.post('/api/grocery/normalize-all', async (_req, res, next) => {
-    try { res.json(await normalizeAllGroceryItems()); } catch (err) { next(err); }
+  app.post('/api/grocery/normalize-all', async (_req, res) => {
+    try {
+      res.json(await normalizeAllGroceryItems());
+    } catch (err) {
+      console.error('[normalize-all]', err?.message, err?.stack?.split('\n')[1]);
+      res.status(500).json({ error: err?.message || String(err) });
+    }
   });
 
   app.delete('/api/grocery/history', async (req, res, next) => {

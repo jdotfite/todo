@@ -48,10 +48,13 @@ export async function normalizeGroceryItemsBatch(titles) {
       { role: 'system', content: NORMALIZE_SYSTEM },
       { role: 'user', content: numbered },
     ],
-    max_tokens: 60 * titles.length + 60,
   });
-  const parsed = JSON.parse(result.choices[0].message.content);
-  const items = Array.isArray(parsed.items) ? parsed.items : Object.values(parsed)[0] ?? [];
+  let items = [];
+  try {
+    const parsed = JSON.parse(result.choices[0].message.content);
+    const candidate = parsed.items ?? parsed.results ?? Object.values(parsed).find(v => Array.isArray(v));
+    if (Array.isArray(candidate)) items = candidate;
+  } catch { /* fall through — items stays [] and we return originals */ }
   return titles.map((t, i) => ({
     normalized: String(items[i]?.normalized || t).trim() || t,
     category: String(items[i]?.category || 'uncategorized').trim().toLowerCase(),
