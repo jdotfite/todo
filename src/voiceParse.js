@@ -19,7 +19,8 @@ Return JSON: {"items":[{"title":"string","quantity":"string","store":"walmart","
 title is the item name only — no quantity prefix.
 quantity is a short string like "2", "1 lb", "dozen" or empty string.
 store is "walmart" (default) or "household".
-category must be one of: produce, dairy, meat, frozen, beverages, snacks, household, personal care, pets, uncategorized.`,
+category must be one of: produce, bakery, dairy, meat, frozen, pantry, beverages, household, personal care, pets, uncategorized.
+bakery = bread, wraps, tortillas, rolls, bagels. pantry = canned goods, pasta, rice, condiments, snacks, chips.`,
 };
 
 export async function voiceParse(transcript, schema) {

@@ -36,11 +36,16 @@ function parseQuantity(title) {
 
 function guessCategory(title) {
   const s = title.toLowerCase();
-  if (/banana|apple|lettuce|tomato|onion|potato|berry|berries|produce/.test(s)) return 'produce';
+  if (/banana|apple|lettuce|tomato|onion|potato|berry|berries|produce|carrot|spinach|broccoli|pepper|mushroom|avocado|orange|grape|lemon|lime|celery|cucumber|zucchini|garlic|kale|corn|peas?$/.test(s)) return 'produce';
+  if (/wrap|tortilla|bread|pita|naan|biscuit|bagel|croissant|\broll\b|\bbun\b|flatbread/.test(s)) return 'bakery';
   if (/milk|cheese|yogurt|butter|cream|egg/.test(s)) return 'dairy';
-  if (/towel|toilet|soap|detergent|trash|bag|foil|paper/.test(s)) return 'household';
-  if (/dog|cat|pet/.test(s)) return 'pets';
-  if (/nugget|pizza|frozen|ice cream/.test(s)) return 'frozen';
+  if (/chicken|beef|pork|turkey|salmon|tuna|shrimp|steak|ground |sausage|bacon|\bham\b|lamb|tilapia|cod|deli|lunch meat|hot dog/.test(s)) return 'meat';
+  if (/pasta|rice|noodle|oatmeal|\boat\b|cereal|flour|sugar|\bsalt\b|\boil\b|vinegar|sauce|ketchup|mustard|mayo|salsa|dressing|broth|canned|lentil|quinoa|chip|cracker|cookie|popcorn|pretzel|granola|candy|chocolate/.test(s)) return 'pantry';
+  if (/water|juice|soda|coffee|\btea\b|lemonade|gatorade|energy drink|wine|beer|kombucha/.test(s)) return 'beverages';
+  if (/nugget|pizza|frozen|ice cream|waffle|burrito|tater tot/.test(s)) return 'frozen';
+  if (/towel|toilet|soap|detergent|trash bag|garbage bag|foil|sponge|bleach|lysol|laundry|dishwasher/.test(s)) return 'household';
+  if (/shampoo|toothpaste|toothbrush|deodorant|razor|lotion|sunscreen|vitamin|bandage|tampon|feminine/.test(s)) return 'personal care';
+  if (/dog|cat|pet|kibble|litter/.test(s)) return 'pets';
   return 'uncategorized';
 }
 

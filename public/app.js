@@ -1954,11 +1954,23 @@ async function renderGrocery() {
   const activeItems = items.filter(i => !i.checked);
   const listText = activeItems.map(i => `${i.quantity ? i.quantity + ' ' : ''}${i.title}`).join('\n');
   content.innerHTML = viewHeader('Grocery', 'Fast shared capture for Walmart and household shopping.', false, activeItems.length) + `
+    <div id="grocery-add-sheet" class="grocery-add-sheet">
+      <div class="grocery-sheet-row">
+        <button id="grocery-scan-btn" class="grocery-sheet-icon-btn" type="button" title="Scan photo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+        <button id="grocery-voice-btn" class="grocery-sheet-icon-btn" type="button" title="Voice input"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
+        <input id="grocery-title" placeholder="Add item…" autocomplete="off">
+        <button id="grocery-add" class="grocery-sheet-submit" type="button" aria-label="Add item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <input type="file" id="grocery-scan-input" accept="image/*" capture="environment" style="display:none">
+      <div id="grocery-suggestions" class="grocery-suggestions" hidden></div>
+    </div>
     <section class="grocery-panel">
       ${recentItems.length ? recentGroceryHtml(recentItems) : ''}
       <div class="grocery-actions">
-        <button id="copy-grocery"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy list</button>
-        <button id="clear-grocery"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Clear checked</button>
+        <button id="copy-grocery" class="grocery-action-btn" title="Copy list to clipboard" aria-label="Copy list"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button>
+        <button id="clear-grocery" class="grocery-action-btn" title="Clear all checked items" aria-label="Clear checked"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Clear</button>
       </div>
       <textarea id="grocery-copy" readonly>${escapeHtml(listText)}</textarea>
     </section>
@@ -1975,18 +1987,6 @@ async function renderGrocery() {
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add new item
       </button>
-    </div>
-    <div id="grocery-add-sheet" class="grocery-add-sheet">
-      <div class="grocery-sheet-row">
-        <input id="grocery-title" placeholder="Add item…" autocomplete="off">
-        <button id="grocery-scan-btn" class="grocery-sheet-icon-btn" type="button" title="Scan photo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
-        <button id="grocery-voice-btn" class="grocery-sheet-icon-btn" type="button" title="Voice input"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
-        <button id="grocery-add" class="grocery-sheet-submit" type="button" aria-label="Add item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
-      </div>
-      <input type="file" id="grocery-scan-input" accept="image/*" capture="environment" style="display:none">
-      <div id="grocery-suggestions" class="grocery-suggestions" hidden></div>
     </div>`;
   $('#grocery-add').onclick = addGroceryFromInput;
   $('#grocery-title').addEventListener('keydown', e => { if (e.key === 'Enter') addGroceryFromInput(); if (e.key === 'Escape') closeGrocerySheet(); });
