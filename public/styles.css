@@ -140,9 +140,15 @@ button:active { transform: translateY(1px); }
 .grocery-actions button, #grocery-add { border: 1px solid var(--border); background: #171821; color: white; border-radius: 12px; padding: 10px 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 #grocery-add svg { display: block; }
 .grocery-actions button { background: white; color: var(--text); }
-.recent-grocery { display: grid; gap: 8px; padding: 10px; border-radius: 14px; background: var(--surface-soft); border: 1px solid var(--border); }
-.recent-grocery > span { color: var(--muted); font-size: 12px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
-.recent-grocery > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.recent-grocery { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: var(--surface-soft); border: 1px solid var(--border); }
+.recent-grocery-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.recent-grocery-title-group { display: flex; flex-direction: column; gap: 3px; }
+.recent-grocery-title { display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700; color: #f2f2f2; }
+.recent-grocery-subtitle { font-size: 12px; color: #777; }
+.recent-grocery-clear-all { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #ffd60a; background: transparent; border: 0; cursor: pointer; padding: 2px 0; white-space: nowrap; flex-shrink: 0; }
+.recent-grocery-clear-all:hover { opacity: .75; }
+.recent-grocery-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.readd-plus { color: #ffd60a; font-weight: 800; }
 .recent-grocery-pill { display: inline-flex; align-items: center; touch-action: pan-y; transition: transform .16s ease; }
 .recent-grocery-pill.swiping { transition: none; }
 .recent-grocery-chip { border: 1px solid var(--border); background: white; color: var(--text); border-radius: 999px; padding: 8px 11px; font-size: 13px; font-weight: 800; }
@@ -1597,7 +1603,7 @@ button:focus-visible,
     border: 0;
   }
 
-  body[data-view="grocery"] .recent-grocery > span,
+  body[data-view="grocery"] .recent-grocery-title,
   body[data-view="grocery"] .grocery-group h3 {
     color: #8d8d8d;
     font-size: 12px;
@@ -1605,7 +1611,7 @@ button:focus-visible,
     letter-spacing: .08em;
   }
 
-  body[data-view="grocery"] .recent-grocery > div {
+  body[data-view="grocery"] .recent-grocery-pills {
     display: flex;
     flex-wrap: nowrap;
     gap: 8px;
@@ -1616,7 +1622,7 @@ button:focus-visible,
     -webkit-overflow-scrolling: touch;
   }
 
-  body[data-view="grocery"] .recent-grocery > div::-webkit-scrollbar {
+  body[data-view="grocery"] .recent-grocery-pills::-webkit-scrollbar {
     display: none;
   }
 
@@ -1902,7 +1908,7 @@ button:focus-visible,
 
   body[data-view="grocery"] .grocery-sheet-row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto auto auto;
     gap: 8px;
     align-items: center;
   }
@@ -2039,8 +2045,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: rgba(255,255,255,.06);
 }
 
-.recent-grocery > span small {
-  margin-left: 8px;
+.recent-grocery-subtitle {
   color: #7d7d7d;
   font-size: 11px;
   font-weight: 500;
@@ -3155,3 +3160,152 @@ body[data-view="profile"] .fab-add { display: none !important; }
 .pspage-active-chip { font-size: 11px; font-weight: 760; background: #2a2a2a; border: 1px solid #383838; color: #888; border-radius: 20px; padding: 3px 10px; }
 .pspage-switch-label { font-size: 13px; color: #666; flex-shrink: 0; }
 .pspage-profile-row:not(.is-active):hover .pspage-switch-label { color: #ffd60a; }
+
+/* ── Grocery redesign: desktop bottom bar, kebab menu, header tweaks ── */
+
+/* Grocery eyebrow: yellow label */
+body[data-view="grocery"] .eyebrow { color: #ffd60a; }
+
+/* Grocery panel: transparent wrapper on desktop — quick-readd keeps its own box */
+body[data-view="grocery"] .grocery-panel {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  gap: 12px;
+}
+
+/* Grocery actions: icon + text alignment */
+.grocery-actions button { display: flex; align-items: center; gap: 6px; }
+
+/* Grocery item kebab menu button */
+.grocery-item-menu-btn {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 0;
+  color: #555;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  flex-shrink: 0;
+  padding: 0;
+}
+.grocery-item-menu-btn:hover { background: #333; color: #aaa; }
+
+/* Floating kebab dropdown */
+.grocery-kebab-menu {
+  position: absolute;
+  z-index: 200;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.55);
+  overflow: hidden;
+}
+.grocery-kebab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #e0e0e0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .1s;
+}
+.grocery-kebab-item:hover { background: #333; }
+
+/* Hide textarea on desktop grocery view */
+body[data-view="grocery"] #grocery-copy { display: none; }
+
+/* ── Grocery desktop: always-visible add bar, never a FAB ── */
+@media (min-width: 721px) {
+  body[data-view="grocery"] main { padding-bottom: 96px; }
+
+  body[data-view="grocery"] .grocery-fab-wrap { display: none; }
+
+  body[data-view="grocery"] .grocery-add-sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: block;
+    transform: none !important;
+    background: #111;
+    border-top: 1px solid rgba(255,255,255,.08);
+    padding: 14px 32px calc(14px + env(safe-area-inset-bottom));
+    z-index: 20;
+  }
+
+  body[data-view="grocery"] .grocery-add-sheet .grocery-sheet-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 10px;
+    max-width: 960px;
+    margin: 0 auto;
+    align-items: center;
+  }
+
+  body[data-view="grocery"] .grocery-add-sheet #grocery-title {
+    min-height: 52px;
+    border-radius: 12px;
+    border: 1.5px solid rgba(255,255,255,.12);
+    background: #1a1a1a;
+    color: #f7f7f7;
+    font-size: 16px;
+    font-weight: 440;
+    padding: 0 16px;
+    box-shadow: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  body[data-view="grocery"] .grocery-add-sheet #grocery-title:focus {
+    outline: none;
+    border-color: #ffd60a;
+    box-shadow: 0 0 0 3px rgba(255,214,10,.12);
+  }
+
+  body[data-view="grocery"] .grocery-add-sheet .grocery-sheet-icon-btn {
+    width: 46px;
+    height: 52px;
+    border: 1.5px solid rgba(255,255,255,.1);
+    background: #1a1a1a;
+    color: #777;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body[data-view="grocery"] .grocery-add-sheet .grocery-sheet-icon-btn:hover { background: #242424; color: #bbb; }
+
+  body[data-view="grocery"] .grocery-add-sheet .grocery-sheet-submit {
+    width: 52px;
+    height: 52px;
+    background: #ffd60a;
+    color: #111;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  body[data-view="grocery"] .grocery-add-sheet .grocery-sheet-submit:hover { background: #ffdf32; }
+
+  body[data-view="grocery"] .grocery-add-sheet .grocery-suggestions {
+    position: static;
+    border-radius: 10px;
+    margin-top: 8px;
+    border: 1px solid #2e2e2e;
+    max-width: 960px;
+    margin-inline: auto;
+  }
+
+  /* Reduce item name weight on desktop */
+  body[data-view="grocery"] .grocery-item-name { font-weight: 450; }
+}

@@ -1344,8 +1344,8 @@ function closeGrocerySheet() {
   if (sugg) sugg.hidden = true;
 }
 
-function startGroceryVoice() {
-  const fab = $('#grocery-fab');
+function startGroceryVoice(triggerBtn) {
+  const fab = triggerBtn || $('#grocery-fab');
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) { openGrocerySheet(); return; }
   if (navigator.vibrate) navigator.vibrate(14);
@@ -1393,7 +1393,7 @@ function setupGroceryFab() {
     holdTimer = setTimeout(() => {
       holdTimer = null;
       startPos = null;
-      startGroceryVoice();
+      startGroceryVoice(fab);
     }, 520);
   });
   fab.addEventListener('pointerup', () => {
@@ -1957,12 +1957,18 @@ async function renderGrocery() {
     <section class="grocery-panel">
       ${recentItems.length ? recentGroceryHtml(recentItems) : ''}
       <div class="grocery-actions">
-        <button id="copy-grocery">Copy list</button>
-        <button id="clear-grocery">Clear checked</button>
+        <button id="copy-grocery"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy list</button>
+        <button id="clear-grocery"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Clear checked</button>
       </div>
       <textarea id="grocery-copy" readonly>${escapeHtml(listText)}</textarea>
     </section>
     ${items.length ? Object.entries(grouped).map(([category, group]) => groceryGroupHtml(category, group)).join('') : '<div class="empty-state">Grocery list is empty. Add milk, bananas, or walmart 2 paper towels.</div>'}
+    <div id="grocery-kebab-menu" class="grocery-kebab-menu" hidden>
+      <a id="grocery-kebab-search" class="grocery-kebab-item" target="_blank" rel="noopener">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Search Walmart
+      </a>
+    </div>
     <div class="grocery-fab-wrap">
       <p class="grocery-fab-hint">Tap to type · Hold for voice</p>
       <button id="grocery-fab" class="grocery-fab-btn" aria-label="Add grocery item" type="button">
@@ -1973,9 +1979,10 @@ async function renderGrocery() {
     <div id="grocery-add-sheet" class="grocery-add-sheet">
       <div class="grocery-sheet-row">
         <input id="grocery-title" placeholder="Add item…" autocomplete="off">
-        <button id="grocery-scan-btn" class="grocery-sheet-icon-btn" type="button" title="Scan photo">📷</button>
+        <button id="grocery-scan-btn" class="grocery-sheet-icon-btn" type="button" title="Scan photo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+        <button id="grocery-voice-btn" class="grocery-sheet-icon-btn" type="button" title="Voice input"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
         <button id="grocery-add" class="grocery-sheet-submit" type="button" aria-label="Add item">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><polyline points="5 12 12 5 19 12"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
       <input type="file" id="grocery-scan-input" accept="image/*" capture="environment" style="display:none">
@@ -1990,8 +1997,8 @@ async function renderGrocery() {
   $('#copy-grocery').onclick = async () => {
     const text = $('#grocery-copy').value;
     if (navigator.clipboard) await navigator.clipboard.writeText(text);
-    $('#copy-grocery').textContent = 'Copied';
-    setTimeout(() => $('#copy-grocery').textContent = 'Copy Walmart list', 1200);
+    $('#copy-grocery').textContent = 'Copied!';
+    setTimeout(() => renderGrocery(), 1200);
   };
   document.querySelectorAll('.recent-grocery-chip').forEach(btn => btn.onclick = async e => {
     if (quickReaddDeleteMode) return;
@@ -2008,10 +2015,24 @@ async function renderGrocery() {
     await api(`/api/grocery/${e.target.closest('.grocery-item').dataset.id}`, { method: 'PATCH', body: JSON.stringify({ checked: e.target.checked }) });
     renderGrocery();
   });
-  document.querySelectorAll('.walmart-link').forEach(a => {
-    const query = new URLSearchParams({ q: a.dataset.query, facet: 'fulfillment_method_in_store:In-store' });
-    a.href = `https://www.walmart.com/search?${query.toString()}`;
+  const kebabMenu = $('#grocery-kebab-menu');
+  document.querySelectorAll('.grocery-item-menu-btn').forEach(btn => {
+    btn.onclick = e => {
+      e.stopPropagation();
+      const searchUrl = `https://www.walmart.com/search?${new URLSearchParams({ q: btn.dataset.query, facet: 'fulfillment_method_in_store:In-store' })}`;
+      $('#grocery-kebab-search').href = searchUrl;
+      const rect = btn.getBoundingClientRect();
+      kebabMenu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+      kebabMenu.style.right = `${window.innerWidth - rect.right}px`;
+      kebabMenu.hidden = false;
+    };
   });
+  document.addEventListener('click', () => { if (kebabMenu) kebabMenu.hidden = true; });
+  $('#clear-readd-all')?.addEventListener('click', async () => {
+    await Promise.all(recentItems.map(item => api(`/api/grocery/${item.id}`, { method: 'DELETE' })));
+    renderGrocery();
+  });
+  $('#grocery-voice-btn')?.addEventListener('click', () => startGroceryVoice($('#grocery-voice-btn')));
   document.querySelectorAll('.qty-plus').forEach(btn => btn.onclick = async e => {
     e.stopPropagation();
     const id = btn.dataset.id;
@@ -2040,7 +2061,20 @@ async function renderGrocery() {
 }
 
 function recentGroceryHtml(items) {
-  return `<div class="recent-grocery ${quickReaddDeleteMode ? 'quick-readd-delete-mode' : ''}" aria-label="Recently bought items"><span>Quick re-add <small>Hold item to delete</small></span><div>${items.map(item => `<span class="recent-grocery-pill" data-id="${escapeAttribute(item.id)}"><button type="button" class="recent-grocery-chip" data-id="${escapeAttribute(item.id)}">+ ${escapeHtml(item.quantity ? item.quantity + ' ' : '')}${escapeHtml(item.title)}</button><button type="button" class="recent-grocery-delete" data-id="${escapeAttribute(item.id)}" aria-label="Remove from quick re-add">×</button></span>`).join('')}</div></div>`;
+  const pills = items.map(item => `<span class="recent-grocery-pill" data-id="${escapeAttribute(item.id)}"><button type="button" class="recent-grocery-chip" data-id="${escapeAttribute(item.id)}"><span class="readd-plus">+</span> ${escapeHtml(item.quantity ? item.quantity + ' ' : '')}${escapeHtml(item.title)}</button><button type="button" class="recent-grocery-delete" data-id="${escapeAttribute(item.id)}" aria-label="Remove from quick re-add">×</button></span>`).join('');
+  return `<div class="recent-grocery ${quickReaddDeleteMode ? 'quick-readd-delete-mode' : ''}">
+    <div class="recent-grocery-header">
+      <div class="recent-grocery-title-group">
+        <span class="recent-grocery-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="#ffd60a" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick re-add</span>
+        <span class="recent-grocery-subtitle">Tap a frequently added item to re-add it to your list.</span>
+      </div>
+      <button type="button" class="recent-grocery-clear-all" id="clear-readd-all">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        Clear all
+      </button>
+    </div>
+    <div class="recent-grocery-pills">${pills}</div>
+  </div>`;
 }
 
 function bindRecentGrocerySwipeDelete() {
@@ -2121,7 +2155,7 @@ function groceryGroupHtml(category, items) {
             <span class="qty-num">${qtyNum}</span>
             <button type="button" class="qty-btn qty-plus" data-id="${escapeAttribute(item.id)}">+</button>
           </div>
-          <a class="walmart-link" data-query="${escapeHtml(item.title)}" target="_blank" rel="noopener" aria-label="Search Walmart for ${escapeAttribute(item.title)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a>
+          <button type="button" class="grocery-item-menu-btn" data-id="${escapeAttribute(item.id)}" data-query="${escapeHtml(item.title)}" aria-label="More options"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
         </div>
       </article>`;
     }).join('')}
