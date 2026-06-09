@@ -12,13 +12,12 @@ test('db uses Vercel KV REST when KV environment is configured', async () => {
   process.env.KV_REST_API_URL = 'https://kv.example.test';
   process.env.KV_REST_API_TOKEN = 'secret';
   process.env.TODO_KV_KEY = 'todo:test';
+  // Mock matches the POST-body API: body is ["COMMAND", ...args]
   globalThis.fetch = async (url, options) => {
     calls.push({ url, options });
-    if (url.includes('/get/')) return Response.json({ result: saved });
-    if (url.includes('/set/')) {
-      saved = decodeURIComponent(url.split('/set/')[1].split('/').slice(1).join('/'));
-      return Response.json({ result: 'OK' });
-    }
+    const [cmd, ...args] = JSON.parse(options?.body || '[]');
+    if (cmd === 'GET') return Response.json({ result: saved });
+    if (cmd === 'SET') { saved = args[1]; return Response.json({ result: 'OK' }); }
     return new Response('unexpected', { status: 500 });
   };
 
@@ -29,9 +28,13 @@ test('db uses Vercel KV REST when KV environment is configured', async () => {
 
     assert.deepEqual(store.tasks, [{ id: '1', title: 'Cloud task' }]);
     assert.equal(calls.at(-1).options.headers.Authorization, 'Bearer secret');
-    const setCall = calls.findLast(call => call.url.startsWith('https://kv.example.test/set/todo%3Atest/'));
-    assert.ok(setCall);
-    const savedStore = JSON.parse(decodeURIComponent(setCall.url.split('/set/todo%3Atest/')[1]));
+    const setCall = calls.findLast(c => {
+      const [cmd, key] = JSON.parse(c.options?.body || '[]');
+      return cmd === 'SET' && key === 'todo:test';
+    });
+    assert.ok(setCall, 'expected a SET call for todo:test');
+    const [, , rawValue] = JSON.parse(setCall.options.body);
+    const savedStore = JSON.parse(rawValue);
     assert.deepEqual(savedStore.tasks, [{ id: '1', title: 'Cloud task' }]);
     assert.deepEqual(savedStore.groceryItems, []);
     assert.ok(Array.isArray(savedStore.profiles));
@@ -58,7 +61,7 @@ test('db falls back to writable tmp storage on Vercel without KV', async () => {
 
   try {
     const db = await import(`../src/db.js?vercel=${Date.now()}`);
-    assert.equal(db.dbPath, '/tmp/todo.json');
+    assert.ok(db.dbPath.replace(/\\/g, '/').endsWith('/tmp/todo.json'), `expected tmp path, got ${db.dbPath}`);
     await db.writeStore({ tasks: [], groceryItems: [] });
     const store = await db.readStore();
     assert.deepEqual(store.tasks, []);
