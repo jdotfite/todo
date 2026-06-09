@@ -1562,6 +1562,7 @@ button:focus-visible,
   }
 
   body[data-view="grocery"] #grocery-title {
+    min-width: 0;
     min-height: 52px;
     border: 0;
     border-radius: 6px;
@@ -1570,6 +1571,7 @@ button:focus-visible,
     font-size: 18px;
     font-weight: 520;
     box-shadow: none;
+    padding: 0 14px;
   }
 
   body[data-view="grocery"] #grocery-add {
@@ -1585,15 +1587,8 @@ button:focus-visible,
     flex-shrink: 0;
   }
 
-  body[data-view="grocery"] .grocery-voice-btn {
-    width: 44px;
-    height: 52px;
-    padding: 0;
-    border-radius: 6px;
-    font-size: 18px;
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
+  body[data-view="grocery"] .grocery-add {
+    align-items: stretch;
   }
 
   body[data-view="grocery"] .recent-grocery {
@@ -1665,47 +1660,169 @@ button:focus-visible,
   }
 
   body[data-view="grocery"] .grocery-group {
-    margin-top: 18px;
+    margin-top: 0;
   }
 
   body[data-view="grocery"] .grocery-group h3 {
-    margin-bottom: 9px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 20px 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: #666;
+  }
+
+  body[data-view="grocery"] .grocery-cat-emoji {
+    font-size: 13px;
+    line-height: 1;
   }
 
   body[data-view="grocery"] .grocery-item {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    display: flex;
+    align-items: center;
     gap: 10px;
-    min-height: 56px;
-    margin: 0 0 10px;
+    min-height: 54px;
+    margin: 0 0 6px;
     padding: 10px 12px;
     border: 0;
-    border-radius: 6px;
-    background: #282828;
+    border-radius: 10px;
+    background: #2a2a2a;
     box-shadow: none;
   }
 
-  body[data-view="grocery"] .grocery-item label {
+  body[data-view="grocery"] .grocery-item.checked {
+    opacity: .55;
+  }
+
+  body[data-view="grocery"] .grocery-item-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
     min-width: 0;
-    gap: 10px;
-    color: #f5f5f5;
-    font-size: 18px;
-    font-weight: 590;
-    line-height: 1.1;
+    cursor: pointer;
   }
 
   body[data-view="grocery"] .grocery-item input[type="checkbox"] {
-    flex: 0 0 auto;
-    width: 24px;
-    height: 24px;
-    accent-color: #ffd60a;
+    appearance: none;
+    -webkit-appearance: none;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #555;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    accent-color: unset;
   }
 
-  body[data-view="grocery"] .grocery-item .badge {
-    justify-self: end;
-    background: #202020;
-    border-color: #373737;
-    color: #cfcfcf;
-    font-size: 11px;
+  body[data-view="grocery"] .grocery-item input[type="checkbox"]:checked {
+    background: #ffd60a;
+    border-color: #ffd60a;
+  }
+
+  body[data-view="grocery"] .grocery-item input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 6px;
+    height: 10px;
+    border: 2px solid #111;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+  }
+
+  body[data-view="grocery"] .grocery-item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  body[data-view="grocery"] .grocery-item-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #f0f0f0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+
+  body[data-view="grocery"] .grocery-item-qty-note {
+    font-size: 12px;
+    color: #777;
+    line-height: 1;
+  }
+
+  body[data-view="grocery"] .grocery-item.checked .grocery-item-name {
+    text-decoration: line-through;
+    color: #666;
+  }
+
+  body[data-view="grocery"] .grocery-item-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  body[data-view="grocery"] .qty-stepper {
+    display: flex;
+    align-items: center;
+    background: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  body[data-view="grocery"] .qty-btn {
+    width: 28px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: #ffd60a;
+    font-size: 18px;
+    font-weight: 300;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    flex-shrink: 0;
+  }
+
+  body[data-view="grocery"] .qty-num {
+    min-width: 22px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ccc;
+  }
+
+  body[data-view="grocery"] .grocery-secondary-btns {
+    display: flex;
+    gap: 8px;
+  }
+
+  body[data-view="grocery"] .grocery-secondary-btns .grocery-voice-btn {
+    flex: 1;
+    height: 38px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    width: auto;
+    padding: 0 12px;
+    gap: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   body[data-view="grocery"] .walmart-link {

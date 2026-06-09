@@ -1871,13 +1871,13 @@ async function renderGrocery() {
     <section class="grocery-panel">
       <div class="grocery-add-wrap">
       <div class="grocery-add">
-        <input id="grocery-title" placeholder="Add grocery item… e.g. walmart 2 paper towels" autofocus autocomplete="off">
-        <div class="grocery-add-btns">
-          <button type="button" id="grocery-voice-btn" class="grocery-voice-btn" title="Speak to add items">🎤</button>
-          <button type="button" id="grocery-scan-btn" class="grocery-voice-btn" title="Scan barcode or product photo">📷</button>
-          <input type="file" id="grocery-scan-input" accept="image/*" capture="environment" style="display:none">
-          <button id="grocery-add" aria-label="Add grocery item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        </div>
+        <input id="grocery-title" placeholder="Add item…" autofocus autocomplete="off">
+        <button id="grocery-add" aria-label="Add grocery item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      </div>
+      <div class="grocery-secondary-btns">
+        <button type="button" id="grocery-voice-btn" class="grocery-voice-btn" title="Speak to add items">🎤 Voice</button>
+        <button type="button" id="grocery-scan-btn" class="grocery-voice-btn" title="Scan barcode or photo">📷 Scan</button>
+        <input type="file" id="grocery-scan-input" accept="image/*" capture="environment" style="display:none">
       </div>
       <div id="grocery-suggestions" class="grocery-suggestions" hidden></div>
       </div>
@@ -1917,11 +1917,33 @@ async function renderGrocery() {
     renderGrocery();
   });
   document.querySelectorAll('.walmart-link').forEach(a => {
-    const query = new URLSearchParams({
-      q: a.dataset.query,
-      facet: 'fulfillment_method_in_store:In-store',
-    });
+    const query = new URLSearchParams({ q: a.dataset.query, facet: 'fulfillment_method_in_store:In-store' });
     a.href = `https://www.walmart.com/search?${query.toString()}`;
+  });
+  document.querySelectorAll('.qty-plus').forEach(btn => btn.onclick = async e => {
+    e.stopPropagation();
+    const id = btn.dataset.id;
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const n = parseQtyNum(item.quantity);
+    const note = parseQtyNote(item.quantity);
+    const newQty = `${n + 1}${note ? ' ' + note : ''}`;
+    btn.closest('.qty-stepper').querySelector('.qty-num').textContent = n + 1;
+    item.quantity = newQty;
+    await api(`/api/grocery/${id}`, { method: 'PATCH', body: JSON.stringify({ quantity: newQty }) });
+  });
+  document.querySelectorAll('.qty-minus').forEach(btn => btn.onclick = async e => {
+    e.stopPropagation();
+    const id = btn.dataset.id;
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const n = parseQtyNum(item.quantity);
+    if (n <= 1) return;
+    const note = parseQtyNote(item.quantity);
+    const newQty = n - 1 === 1 && !note ? '' : `${n - 1}${note ? ' ' + note : ''}`;
+    btn.closest('.qty-stepper').querySelector('.qty-num').textContent = n - 1;
+    item.quantity = newQty;
+    await api(`/api/grocery/${id}`, { method: 'PATCH', body: JSON.stringify({ quantity: newQty }) });
   });
 }
 
@@ -1976,11 +1998,42 @@ function bindRecentGrocerySwipeDelete() {
   });
 }
 
+const GROCERY_CAT_EMOJI = { dairy: '🥛', produce: '🥦', meat: '🥩', frozen: '❄️', beverages: '🥤', snacks: '🍿', household: '🏠', 'personal care': '🧴', pets: '🐾', pantry: '🥫', bakery: '🍞', uncategorized: '🛒' };
+
+function parseQtyNum(qty) {
+  const m = String(qty || '').match(/^(\d+)/);
+  return m ? parseInt(m[1]) : 1;
+}
+function parseQtyNote(qty) {
+  return String(qty || '').replace(/^\d+\s*/, '').trim();
+}
+
 function groceryGroupHtml(category, items) {
-  return `<section class="grocery-group"><h3>${escapeHtml(category)}</h3>${items.map(item => `<article class="grocery-item ${item.checked ? 'checked' : ''}" data-id="${item.id}">
-    <label><input class="grocery-check" type="checkbox" ${item.checked ? 'checked' : ''}> <span>${escapeHtml(item.quantity ? item.quantity + ' ' : '')}${escapeHtml(item.title)}</span></label>
-    <a class="walmart-link" data-query="${escapeHtml(item.title)}" target="_blank" rel="noopener" title="Search Walmart for ${escapeAttribute(item.title)}" aria-label="Search Walmart for ${escapeAttribute(item.title)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a>
-  </article>`).join('')}</section>`;
+  const emoji = GROCERY_CAT_EMOJI[category.toLowerCase()] || '🛒';
+  return `<section class="grocery-group">
+    <h3><span class="grocery-cat-emoji">${emoji}</span>${escapeHtml(category)}</h3>
+    ${items.map(item => {
+      const qtyNum = parseQtyNum(item.quantity);
+      const qtyNote = parseQtyNote(item.quantity);
+      return `<article class="grocery-item ${item.checked ? 'checked' : ''}" data-id="${escapeAttribute(item.id)}">
+        <label class="grocery-item-main">
+          <input class="grocery-check" type="checkbox" ${item.checked ? 'checked' : ''}>
+          <div class="grocery-item-body">
+            <span class="grocery-item-name">${escapeHtml(item.title)}</span>
+            ${qtyNote ? `<span class="grocery-item-qty-note">${escapeHtml(qtyNote)}</span>` : ''}
+          </div>
+        </label>
+        <div class="grocery-item-right">
+          <div class="qty-stepper">
+            <button type="button" class="qty-btn qty-minus" data-id="${escapeAttribute(item.id)}">−</button>
+            <span class="qty-num">${qtyNum}</span>
+            <button type="button" class="qty-btn qty-plus" data-id="${escapeAttribute(item.id)}">+</button>
+          </div>
+          <a class="walmart-link" data-query="${escapeHtml(item.title)}" target="_blank" rel="noopener" aria-label="Search Walmart for ${escapeAttribute(item.title)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a>
+        </div>
+      </article>`;
+    }).join('')}
+  </section>`;
 }
 
 let _grocerySuggestion = null;
