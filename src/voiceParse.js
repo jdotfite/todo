@@ -2,7 +2,10 @@ import OpenAI from 'openai';
 
 let client;
 function getClient() {
-  if (!client) client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  if (!client) {
+    const apiKey = (process.env.OPENAI_API_KEY || '').replace(/^﻿/, '').trim();
+    client = new OpenAI({ apiKey });
+  }
   return client;
 }
 
