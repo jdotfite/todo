@@ -3184,7 +3184,7 @@ body[data-view="grocery"] .grocery-panel {
   height: 28px;
   background: transparent;
   border: 0;
-  color: #555;
+  color: #888;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -3308,4 +3308,60 @@ body[data-view="grocery"] #grocery-copy { display: none; }
 
   /* Reduce item name weight on desktop */
   body[data-view="grocery"] .grocery-item-name { font-weight: 450; }
+
+  /* Item right: stepper + kebab side-by-side */
+  body[data-view="grocery"] .grocery-item-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  body[data-view="grocery"] .qty-stepper {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 8px;
+    height: 34px;
+    overflow: hidden;
+  }
+
+  body[data-view="grocery"] .qty-btn {
+    width: 30px;
+    height: 34px;
+    border: 0;
+    background: transparent;
+    color: #888;
+    font-size: 16px;
+    font-weight: 400;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  body[data-view="grocery"] .qty-btn:hover { color: #ddd; background: rgba(255,255,255,.06); }
+  body[data-view="grocery"] .qty-minus { color: #666; }
+  body[data-view="grocery"] .qty-plus { color: #ffd60a; }
+
+  body[data-view="grocery"] .qty-num {
+    min-width: 24px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #d8d8d8;
+    padding: 0 2px;
+    border-left: 1px solid rgba(255,255,255,.08);
+    border-right: 1px solid rgba(255,255,255,.08);
+  }
+
+  /* Kebab button: inline with stepper, clearly visible */
+  body[data-view="grocery"] .grocery-item-menu-btn {
+    color: #888;
+    width: 28px;
+    height: 34px;
+  }
+  body[data-view="grocery"] .grocery-item-menu-btn:hover { color: #ddd; background: rgba(255,255,255,.06); }
 }
