@@ -1958,7 +1958,6 @@ async function renderGrocery() {
     <div class="grocery-actions">
       <button id="copy-grocery" class="grocery-action-btn" title="Copy list to clipboard" aria-label="Copy list"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy</button>
       <button id="clear-grocery" class="grocery-action-btn" title="Clear all checked items" aria-label="Clear checked"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Clear</button>
-      <button id="normalize-grocery" class="grocery-action-btn" title="Clean up all item names and categories using AI" aria-label="Clean up names"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Clean up</button>
       <textarea id="grocery-copy" readonly style="display:none">${escapeHtml(listText)}</textarea>
     </div>
     ${items.length ? Object.entries(grouped).map(([category, group]) => groceryGroupHtml(category, group)).join('') : '<div class="empty-state">Grocery list is empty. Add milk, bananas, or walmart 2 paper towels.</div>'}
@@ -1985,18 +1984,6 @@ async function renderGrocery() {
   setupGroceryScanInput();
   setupGroceryAutocomplete();
   $('#clear-grocery').onclick = async () => { await api('/api/grocery/clear-checked', { method: 'POST' }); renderGrocery(); };
-  $('#normalize-grocery').onclick = async () => {
-    const btn = $('#normalize-grocery');
-    const orig = btn.innerHTML;
-    btn.textContent = 'Cleaning…';
-    btn.disabled = true;
-    try {
-      const { changed, total } = await api('/api/grocery/normalize-all', { method: 'POST' });
-      renderGrocery();
-      // brief flash of result before re-render clears it
-      if (!changed) console.info(`Grocery normalize: all ${total} items already clean`);
-    } catch { btn.innerHTML = orig; btn.disabled = false; }
-  };
   $('#copy-grocery').onclick = async () => {
     const text = $('#grocery-copy').value;
     if (navigator.clipboard) await navigator.clipboard.writeText(text);
@@ -2402,8 +2389,13 @@ $('#add').onclick = addTask;
 document.querySelector('.fab-add')?.addEventListener('click', openPrimaryAdd);
 ['#new-title', '#new-project', '#new-due', '#new-recurrence'].forEach(sel => $(sel).addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); }));
 document.addEventListener('keydown', e => {
-  if (e.target.matches('input, select, [contenteditable="true"]')) return;
-  if (e.key.toLowerCase() === 'n') { e.preventDefault(); $('#new-title').focus(); }
+  if (e.target.matches('input, textarea, select, [contenteditable="true"]')) return;
+  if (e.key.toLowerCase() === 'n') {
+    e.preventDefault();
+    const groceryInput = $('#grocery-title');
+    if (groceryInput && groceryInput.offsetParent !== null) { groceryInput.focus(); }
+    else { $('#new-title')?.focus(); }
+  }
   if (e.key === '1') { e.preventDefault(); navigateTo('/home'); }
   if (e.key === '2') { e.preventDefault(); navigateTo('/today'); }
   if (e.key === '3') { e.preventDefault(); navigateTo('/calendar'); }
