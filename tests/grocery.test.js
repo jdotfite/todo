@@ -10,10 +10,11 @@ test('grocery items can be created, listed, checked, and cleared', async () => {
 
   let items = await listGroceryItems();
   assert.equal(items.length, 2);
-  assert.equal(items[0].title, 'milk');
-  assert.equal(items[0].store, 'walmart');
-  assert.equal(items[0].quantity, '2');
-  assert.equal(items[0].checked, false);
+  const milkItem = items.find(i => i.title === 'milk');
+  assert.ok(milkItem, 'milk item should exist');
+  assert.equal(milkItem.store, 'walmart');
+  assert.equal(milkItem.quantity, '2');
+  assert.equal(milkItem.checked, false);
 
   const checked = await updateGroceryItem(milk.id, { checked: true });
   assert.equal(checked.checked, true);

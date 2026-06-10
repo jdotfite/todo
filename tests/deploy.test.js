@@ -9,8 +9,7 @@ test('vercel config routes api and spa pages', () => {
   const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
   assert.deepEqual(config.rewrites, [
     { source: '/api/(.*)', destination: '/api/index.js' },
-    { source: '/', destination: '/api/index.js' },
-    { source: '/(login|home|inbox|today|future|grocery|calendar|documents|tips|chat|settings|projects|done)', destination: '/api/index.js' },
+    { source: '/(.*)', destination: '/api/index.js' },
   ]);
   assert.ok(existsSync('api/index.js'));
   assert.equal(typeof appDefault, 'function');

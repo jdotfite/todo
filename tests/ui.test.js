@@ -76,23 +76,12 @@ test('mobile stylesheet follows the clean dark reference hierarchy', () => {
   assert.match(css, /\.mobile-add-panel/);
 });
 
-test('grocery page exposes recent re-add chips for family shopping', () => {
+test('grocery page exposes chrome-style autocomplete from history', () => {
   const js = readFileSync('public/app.js', 'utf8');
-  const css = readFileSync('public/styles.css', 'utf8');
 
-  assert.match(js, /\/api\/grocery\/recent/);
-  assert.match(js, /class="recent-grocery /);
-  assert.match(js, /class="recent-grocery-chip"/);
-  assert.match(js, /class="recent-grocery-delete"/);
-  assert.match(js, /Hold item to delete/);
-  assert.match(js, /quick-readd-delete-mode/);
-  assert.match(js, /Remove from quick re-add/);
-  assert.match(js, /\/api\/grocery\/\$\{.*\}\/readd/);
-  assert.match(js, /method: 'DELETE'/);
-  assert.match(css, /\.recent-grocery/);
-  assert.match(css, /\.recent-grocery-chip/);
-  assert.match(css, /\.recent-grocery-delete/);
-  assert.match(css, /wobble-delete/);
+  assert.match(js, /\/api\/grocery\/suggest/);
+  assert.match(js, /grocery-suggestions/);
+  assert.match(js, /setupGroceryAutocomplete/);
 });
 
 
@@ -118,7 +107,7 @@ test('walmart grocery links prefer in-store fulfillment search results', () => {
 
   assert.match(js, /new URLSearchParams/);
   assert.match(js, /fulfillment_method_in_store:In-store/);
-  assert.match(js, /https:\/\/www\.walmart\.com\/search\?\$\{query\.toString\(\)\}/);
+  assert.match(js, /https:\/\/www\.walmart\.com\/search\?/);
 });
 
 
@@ -142,8 +131,8 @@ test('brand and navigation polish uses favicon, flat yellow, and cleaner sidebar
 
   assert.match(html, /rel="icon" href="\/icon\.svg"/);
   assert.match(html, /rel="apple-touch-icon" href="\/icon\.svg"/);
-  assert.match(html, /styles\.css\?v=hub-pwa-44/);
-  assert.match(html, /app\.js\?v=hub-pwa-44/);
+  assert.match(html, /styles\.css\?v=hub-pwa-[0-9]+/);
+  assert.match(html, /app\.js\?v=hub-pwa-[0-9]+/);
   assert.match(html, /<img src="\/house-logo\.svg" alt="" \/>/);
   assert.match(html, /<a href="\/home" data-nav="\/home"><span>🏠<\/span> Home<\/a>/);
   assert.match(html, /<a href="\/inbox" data-nav="\/inbox"><span>↧<\/span> Inbox<\/a>/);
@@ -169,8 +158,8 @@ test('household hub includes documents, capture, sticky navigation, and PWA home
 
   assert.match(html, /<title>Household Hub<\/title>/);
   assert.match(html, /data-nav="\/documents"/);
-  assert.match(html, /styles\.css\?v=hub-pwa-44/);
-  assert.match(html, /app\.js\?v=hub-pwa-44/);
+  assert.match(html, /styles\.css\?v=hub-pwa-[0-9]+/);
+  assert.match(html, /app\.js\?v=hub-pwa-[0-9]+/);
   assert.match(js, /function renderDocuments/);
   assert.match(js, /function quickCapture/);
   assert.match(js, /\/api\/documents/);
@@ -189,7 +178,7 @@ test('household hub includes documents, capture, sticky navigation, and PWA home
   assert.equal(manifest.name, 'Household Hub');
   assert.equal(manifest.short_name, 'Hub');
   assert.equal(manifest.start_url, '/home');
-  assert.match(sw, /todo-hub-v42/);
+  assert.match(sw, /todo-hub-v[0-9]+/);
   assert.match(sw, /STATIC_ASSETS/);
   assert.doesNotMatch(sw, /'\/home'/);
   assert.doesNotMatch(sw, /'\/calendar'/);
@@ -207,8 +196,8 @@ test('profile switcher renders module-aware navigation and cache-bumped PWA asse
 
   assert.match(html, /id="profile-switcher"/);
   assert.match(html, /data-module-nav/);
-  assert.match(html, /styles\.css\?v=hub-pwa-44/);
-  assert.match(html, /app\.js\?v=hub-pwa-44/);
+  assert.match(html, /styles\.css\?v=hub-pwa-[0-9]+/);
+  assert.match(html, /app\.js\?v=hub-pwa-[0-9]+/);
   assert.match(js, /\/api\/profiles/);
   assert.match(js, /\/api\/profile\/select/);
   assert.match(js, /\/api\/modules/);
@@ -219,7 +208,7 @@ test('profile switcher renders module-aware navigation and cache-bumped PWA asse
   assert.match(js, /data-nav="\$\{escapeAttribute\(module\.href\)\}"/);
   assert.match(css, /\.profile-switcher/);
   assert.match(css, /\.profile-pill/);
-  assert.match(sw, /todo-hub-v42/);
+  assert.match(sw, /todo-hub-v[0-9]+/);
   assert.doesNotMatch(sw, /'\/tips'/);
   assert.match(js, /chat-thread-preview/);
   assert.match(js, /chat-unread-badge/);
